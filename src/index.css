@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-bg: #223448;
+  --color-primary-blue: #2F8EF5;
+  --color-workspace-bg: #F3F7FB;
+  --color-card: #FFFFFF;
+  --color-border-light: #E3E8EE;
+  --color-text-primary: #333C48;
+  --color-text-secondary: #7A8795;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-workspace-bg);
+  color: var(--color-text-primary);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(122, 135, 149, 0.3); 
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(122, 135, 149, 0.5); 
+}
