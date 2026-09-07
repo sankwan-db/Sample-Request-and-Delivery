@@ -275,7 +275,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
     {
       title: 'MONITORING',
       items: [
-        { name: 'Issues', icon: <AlertTriangle size={15} />, path: '/monitoring/issues', roles: ['ADMIN', 'SALE_MANAGER'] },
+        { name: 'Issues', icon: <AlertTriangle size={15} />, path: '/monitoring/issues', roles: ['ADMIN', 'SALE_MANAGER', 'SALE', 'RD', 'CO_SALE', 'LOGISTIC', 'MANAGEMENT'] },
         {
           name: 'Email & Notification', icon: <MailIcon size={15} />, roles: ['ADMIN'],
           subItems: [
