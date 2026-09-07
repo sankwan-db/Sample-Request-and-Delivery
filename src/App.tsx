@@ -24,6 +24,7 @@ import { ProductMasterPage } from './pages/ProductMasterPage';
 import { EmailSettingsPage } from './pages/EmailSettingsPage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { MasterSettingsPage } from './pages/MasterSettingsPage';
+import { IssueCenterPage } from './pages/IssueCenterPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 export default function App() {
@@ -97,6 +98,8 @@ export default function App() {
                 <Route path="/master/approval-matrix" element={<MasterSettingsPage />} />
 
                 {/* Email & Notification Monitoring Routes */}
+                <Route path="/monitoring/issues" element={<IssueCenterPage />} />
+                <Route path="/issues" element={<IssueCenterPage />} />
                 <Route path="/monitoring/email-recipients" element={<EmailSettingsPage />} />
                 <Route path="/monitoring/email-template" element={<EmailSettingsPage />} />
                 <Route path="/monitoring/notification-rules" element={<EmailSettingsPage />} />

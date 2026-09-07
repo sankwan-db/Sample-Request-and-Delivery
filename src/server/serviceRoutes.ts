@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import * as services from './googleSheetsService.js';
+import * as issueServices from './issueService.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -447,7 +448,31 @@ serviceRouter.post('/writeEmailLog', async (req: Request, res: Response) => {
 serviceRouter.post('/createIssue', async (req: Request, res: Response) => {
   try {
     const { token, spreadsheetId } = getAuthContext(req);
-    const result = await services.createIssue(req.body, token, spreadsheetId);
+    const result = await issueServices.createIssue(req.body, token, spreadsheetId);
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+serviceRouter.get('/getIssues', async (req: Request, res: Response) => {
+  try {
+    const { token, spreadsheetId } = getAuthContext(req);
+    const result = await issueServices.getIssues(req.query.sampleNo as string | undefined, token, spreadsheetId);
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+serviceRouter.post('/resolveIssue', async (req: Request, res: Response) => {
+  try {
+    const { token, spreadsheetId } = getAuthContext(req);
+    const { issueId, resolution, resolvedBy } = req.body;
+    if (!issueId || !resolution?.trim()) {
+      return res.status(400).json({ success: false, error: 'issueId and resolution are required' });
+    }
+    const result = await issueServices.resolveIssue(issueId, resolution.trim(), resolvedBy || 'Authorized Staff', token, spreadsheetId);
     res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });

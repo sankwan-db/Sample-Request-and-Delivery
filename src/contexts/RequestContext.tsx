@@ -93,8 +93,9 @@ interface RequestContextType {
   updateCompanySettings: (settings: Partial<CompanySettings>) => Promise<void>;
   
   // Issue Tracking (Parts 72, 73, 74, 75)
-  reportIssue: (sampleNo: string, issue: Omit<RequestIssue, 'id' | 'reportedAt' | 'status'>) => void;
-  resolveIssue: (sampleNo: string, issueId: string, resolutionRemark: string) => void;
+  reportIssue: (sampleNo: string, issue: Omit<RequestIssue, 'id' | 'reportedAt' | 'status'>) => Promise<void>;
+  resolveIssue: (sampleNo: string, issueId: string, resolutionRemark: string) => Promise<void>;
+  routeIssueToSales: (sampleNo: string, issueId: string) => Promise<void>;
   
   // Updates for Task Workflows
   updateCoSaleTask: (sampleNo: string, data: Partial<CoSaleTaskData>) => void;
@@ -123,13 +124,13 @@ const RequestContext = createContext<RequestContextType | undefined>(undefined);
 const INITIAL_REQUESTS: SampleRequest[] = [];
 
 const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
-  companyNameTh: 'บริษัท แซมเปิล โฟลว์ เอนเตอร์ไพรส์ ฟู้ดส์ จำกัด',
-  companyNameEn: 'SAMPLE FLOW ENTERPRISE FOOD COMPANY LIMITED',
+  companyNameTh: 'ชื่อบริษัท',
+  companyNameEn: 'COMPANY NAME',
   companyLogoUrl: '',
-  address: '99/9 หมู่ 5 ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120',
-  taxId: '0105558012345',
-  phone: '02-555-0199',
-  email: 'info@sampleflow.co.th',
+  address: '',
+  taxId: '',
+  phone: '',
+  email: 'operations@example.com',
   docHeaderTitleTh: 'คำขอตัวอย่าง',
   docHeaderTitleEn: 'SAMPLE REQUEST',
   docFooterNote: 'เอกสารทางการสำหรับฝ่ายขายและปฏิบัติการจัดส่งสินค้าตัวอย่าง',
@@ -201,15 +202,22 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         headers['x-spreadsheet-id'] = spreadsheetId;
       }
 
-      const [deptRes, seqRes, auditRes, voidRes, custRes, prodRes, reqRes] = await Promise.all([
+      const [deptRes, seqRes, auditRes, voidRes, custRes, prodRes, reqRes, issueRes] = await Promise.all([
         fetch('/api/rd-departments', { headers }),
         fetch('/api/sequence/list', { headers }),
         fetch('/api/audit-logs', { headers }),
         fetch('/api/voided-numbers', { headers }),
         fetch('/api/services/getCustomers', { headers }),
         fetch('/api/services/getProducts', { headers }),
-        fetch('/api/services/getSampleRequests', { headers })
+        fetch('/api/services/getSampleRequests', { headers }),
+        fetch('/api/services/getIssues', { headers })
       ]);
+
+      let issueRows: any[] = [];
+      if (issueRes.ok) {
+        const issuePayload = await issueRes.json();
+        if (issuePayload.success && Array.isArray(issuePayload.data)) issueRows = issuePayload.data;
+      }
 
       if (deptRes.ok) {
         const d = await deptRes.json();
@@ -323,7 +331,19 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             coSaleStatus: item.CoSale_Status || 'PENDING',
             logisticStatus: item.Logistic_Status || 'PENDING',
             createdTimestamp: item.Created_Timestamp || '',
-            updatedTimestamp: item.Updated_Timestamp || ''
+            updatedTimestamp: item.Updated_Timestamp || '',
+            issues: issueRows.filter((issue: any) => (issue.Sample_No || issue.sampleNo) === (item.Sample_No || item.sampleNo)).map((issue: any) => ({
+              id: issue.Issue_ID || issue.id || '',
+              department: issue.Process || issue.department || 'OTHER',
+              issueType: issue.Issue_Type || issue.issueType || 'OTHER',
+              description: issue.Description || issue.description || '',
+              reportedBy: issue.Owner || issue.reportedBy || 'System',
+              reportedAt: issue.Created_Time || issue.reportedAt || '',
+              status: issue.Status || issue.status || 'OPEN',
+              resolvedBy: issue.Resolved_By || issue.resolvedBy || '',
+              resolvedAt: issue.Resolved_Time || issue.resolvedAt || '',
+              resolutionRemark: issue.Resolution || issue.resolutionRemark || ''
+            }))
           }));
           setRequests(mappedReqs);
         }
@@ -350,7 +370,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch('/api/rd-departments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dept, userEmail: user?.email || 'admin@company.com' })
+        body: JSON.stringify({ dept, userEmail: user?.email || 'admin@example.com' })
       });
       const data = await res.json();
       if (!data.success) {
@@ -364,7 +384,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         const idx = prev.findIndex(d => d.RD_Department_Code.toUpperCase() === (dept.RD_Department_Code || '').toUpperCase());
         if (idx >= 0) {
           const updated = [...prev];
-          updated[idx] = { ...updated[idx], ...dept, Updated_Date: now, Updated_By: user?.email || 'admin@company.com' };
+          updated[idx] = { ...updated[idx], ...dept, Updated_Date: now, Updated_By: user?.email || 'admin@example.com' };
           return updated;
         } else {
           const newDept: RDDepartmentMaster = {
@@ -379,9 +399,9 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             Active: dept.Active !== undefined ? dept.Active : true,
             Sort_Order: dept.Sort_Order || prev.length + 1,
             Created_Date: now,
-            Created_By: user?.email || 'admin@company.com',
+            Created_By: user?.email || 'admin@example.com',
             Updated_Date: now,
-            Updated_By: user?.email || 'admin@company.com'
+            Updated_By: user?.email || 'admin@example.com'
           };
           return [...prev, newDept];
         }
@@ -429,7 +449,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           rdDepartmentCode: rdDeptCode,
           year,
-          userEmail: user?.email || 'sale@company.com',
+          userEmail: user?.email || 'sale@example.com',
           userName: user?.name || 'Sale Specialist'
         })
       });
@@ -482,7 +502,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         oldSampleNo: sampleNo,
         newDepartmentCode: newDeptCode,
         reason,
-        userEmail: user?.email || 'sale@company.com',
+        userEmail: user?.email || 'sale@example.com',
         userName: user?.name || 'Sale Representative',
         role: user?.role || 'SALE'
       })
@@ -530,7 +550,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           targetId,
           targetType,
           details,
-          userEmail: user?.email || 'system@company.com',
+          userEmail: user?.email || 'system@example.com',
           userName: user?.name || user?.email?.split('@')[0] || 'System',
           role: user?.role || 'USER'
         })
@@ -544,7 +564,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         id: `AUD-${Date.now()}`,
         timestamp: nowStr,
         action,
-        userEmail: user?.email || 'system@company.com',
+        userEmail: user?.email || 'system@example.com',
         userName: user?.name || 'System',
         role: user?.role || 'USER',
         targetType,
@@ -609,7 +629,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       createdTime: timeStr,
       createdBy: user?.email || 'EMP-SALE',
       saleName: user?.name || 'Sale Specialist',
-      saleEmail: user?.email || 'sale@company.com',
+      saleEmail: user?.email || 'sale@example.com',
       department: payload.department,
       departmentPrefix: deptObj?.Sample_No_Prefix || payload.department,
       isLocked: false,
@@ -665,7 +685,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         eventCode: 'SUBMITTED_FOR_PRECHECK',
         sendDate: dateStr,
         sendTime: timeStr,
-        toEmail: 'logistic.precheck@company.com',
+        toEmail: 'logistic.precheck@example.com',
         ccEmail: newRequest.saleEmail,
         subject: `[LOGISTIC PRE-CHECK] New Request ${finalSampleNo} - ${payload.customerName}`,
         templateCode: 'TMPL_LOGISTIC_PRECHECK',
@@ -706,7 +726,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
     const checker = data.checkerName || user?.name || 'Logistic Specialist';
-    const checkerMail = data.checkerEmail || user?.email || 'logistic@company.com';
+    const checkerMail = data.checkerEmail || user?.email || 'logistic@example.com';
 
     // Normalize feasibility code
     let normFeas: 'Available' | 'Available with Change' | 'Not Available' = 'Available';
@@ -750,7 +770,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         eventCode: 'PRECHECK_PASSED_WAIT_APPROVAL',
         sendDate: dateStr,
         sendTime: timeStr,
-        toEmail: 'salemanager@company.com',
+        toEmail: 'salemanager@example.com',
         ccEmail: req.saleEmail,
         subject: `[WAITING APPROVAL] ${req.sampleNo} : ผ่านการตรวจสอบโลจิสติกส์แล้ว (${normFeas}) - ${req.customerName}`,
         templateCode: 'TMPL_APPROVAL_REQUEST',
@@ -805,7 +825,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
     const finalApproverName = approverName || user?.name || 'Sale Manager';
-    const finalApproverEmail = approverEmail || user?.email || 'manager@company.com';
+    const finalApproverEmail = approverEmail || user?.email || 'manager@example.com';
 
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
@@ -832,7 +852,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         taskId: `RD-${Date.now()}-${idx}`,
         sampleNo: req.sampleNo,
         assignedTo: `${req.department || 'RD'} Specialist`,
-        assignedEmail: 'rd@company.com',
+        assignedEmail: 'rd@example.com',
         taskCreateTime: `${dateStr} ${timeStr}`,
         requiredDate: req.preparationDate || req.deliveryDate,
         itemCode: line.itemCode,
@@ -849,7 +869,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         taskId: `COS-${Date.now()}`,
         sampleNo: req.sampleNo,
         assignedTo: 'Co-Sale Specialist',
-        assignedEmail: 'cosale@company.com',
+        assignedEmail: 'cosale@example.com',
         customerCode: req.customerCode,
         shipTo: req.shipToCode || req.customerCode,
         sampleType: req.sampleType,
@@ -931,8 +951,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         eventCode: EmailEventCode.SAMPLE_APPROVED,
         sendDate: dateStr,
         sendTime: timeStr,
-        toEmail: `${req.saleEmail}, rd@company.com, cosale@company.com, logistic@company.com`,
-        ccEmail: `${finalApproverEmail}, audit@company.com`,
+        toEmail: `${req.saleEmail}, rd@example.com, cosale@example.com, logistic@example.com`,
+        ccEmail: `${finalApproverEmail}, audit@example.com`,
         subject: `[SAMPLE APPROVED] ${req.sampleNo} (${req.revision}) : อนุมัติแล้ว พร้อมเอกสาร Official PDF - ${req.customerName}`,
         templateCode: 'TMPL_SAMPLE_APPROVED',
         attachmentFile: pdfFileName,
@@ -982,7 +1002,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
     const finalApproverName = approverName || user?.name || 'Sale Manager';
-    const finalApproverEmail = approverEmail || user?.email || 'manager@company.com';
+    const finalApproverEmail = approverEmail || user?.email || 'manager@example.com';
 
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
@@ -1047,7 +1067,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
     const finalApproverName = approverName || user?.name || 'Sale Manager';
-    const finalApproverEmail = approverEmail || user?.email || 'manager@company.com';
+    const finalApproverEmail = approverEmail || user?.email || 'manager@example.com';
 
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
@@ -1168,8 +1188,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           eventCode: 'READY_TO_DELIVER',
           sendDate: now.toISOString().split('T')[0],
           sendTime: now.toTimeString().substring(0, 5),
-          toEmail: 'logistic.dispatcher@company.com',
-          ccEmail: `${req.saleEmail}, cosale@company.com`,
+          toEmail: 'logistic.dispatcher@example.com',
+          ccEmail: `${req.saleEmail}, cosale@example.com`,
           subject: `[READY TO DELIVER] ${req.sampleNo} ผ่าน Gate ครบ 3 เงื่อนไขแล้ว พร้อมจ่ายของ`,
           templateCode: 'TMPL_READY_DELIVER',
           sendStatus: 'SENT',
@@ -1201,7 +1221,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           taskId: `COS-${Date.now()}`,
           sampleNo: req.sampleNo,
           assignedTo: 'Co-Sale',
-          assignedEmail: 'cosale@company.com',
+          assignedEmail: 'cosale@example.com',
           customerCode: req.customerCode,
           shipTo: req.customerCode,
           sampleType: req.sampleType,
@@ -1226,8 +1246,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           eventCode: 'READY_TO_DELIVER',
           sendDate: now.toISOString().split('T')[0],
           sendTime: now.toTimeString().substring(0, 5),
-          toEmail: 'logistic.dispatcher@company.com',
-          ccEmail: `${req.saleEmail}, cosale@company.com`,
+          toEmail: 'logistic.dispatcher@example.com',
+          ccEmail: `${req.saleEmail}, cosale@example.com`,
           subject: `[READY TO DELIVER] ${req.sampleNo} ผ่าน Gate ครบ 3 เงื่อนไขแล้ว พร้อมจ่ายของ`,
           templateCode: 'TMPL_READY_DELIVER',
           sendStatus: 'SENT',
@@ -1288,8 +1308,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           eventCode: 'READY_TO_DELIVER',
           sendDate: now.toISOString().split('T')[0],
           sendTime: now.toTimeString().substring(0, 5),
-          toEmail: 'logistic.dispatcher@company.com',
-          ccEmail: `${req.saleEmail}, cosale@company.com`,
+          toEmail: 'logistic.dispatcher@example.com',
+          ccEmail: `${req.saleEmail}, cosale@example.com`,
           subject: `[READY TO DELIVER] ${req.sampleNo} ผ่าน Gate ครบ 3 เงื่อนไขแล้ว พร้อมจ่ายของ`,
           templateCode: 'TMPL_READY_DELIVER',
           sendStatus: 'SENT',
@@ -1321,7 +1341,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           taskId: `COS-${Date.now()}`,
           sampleNo: req.sampleNo,
           assignedTo: 'Co-Sale Specialist',
-          assignedEmail: 'cosale@company.com',
+          assignedEmail: 'cosale@example.com',
           customerCode: req.customerCode,
           shipTo: req.customerCode,
           sampleType: req.sampleType,
@@ -1393,7 +1413,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Report Issue (Parts 72, 73, 74, 75)
-  const reportIssue = (sampleNo: string, issueData: Omit<RequestIssue, 'id' | 'reportedAt' | 'status'>) => {
+  const reportIssue = async (sampleNo: string, issueData: Omit<RequestIssue, 'id' | 'reportedAt' | 'status'>) => {
     const now = new Date();
     const newIssue: RequestIssue = {
       id: `ISS-${Date.now()}`,
@@ -1410,10 +1430,30 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         updatedTimestamp: now.toISOString()
       };
     }));
+
+    try {
+      const saved = await sheetService.createIssue({
+        sampleNo,
+        process: issueData.department,
+        issueType: issueData.issueType,
+        description: issueData.description,
+        owner: issueData.reportedBy,
+        severity: issueData.department === 'LOGISTIC' ? 'HIGH' : 'MEDIUM'
+      });
+      setRequests(prev => prev.map(req => req.sampleNo !== sampleNo ? req : {
+        ...req,
+        issues: (req.issues || []).map(issue => issue.id === newIssue.id ? {
+          ...issue,
+          id: saved.Issue_ID || issue.id
+        } : issue)
+      }));
+    } catch (error) {
+      console.warn('Issue persistence failed; keeping the optimistic record:', error);
+    }
   };
 
   // Resolve Issue (Parts 72, 73, 74, 75)
-  const resolveIssue = (sampleNo: string, issueId: string, resolutionRemark: string) => {
+  const resolveIssue = async (sampleNo: string, issueId: string, resolutionRemark: string) => {
     const now = new Date();
     const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().substring(0, 5)}`;
     
@@ -1446,6 +1486,49 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         updatedTimestamp: now.toISOString()
       };
     }));
+
+    try {
+      await sheetService.resolveIssue(issueId, resolutionRemark, user?.name || 'Authorized Staff');
+    } catch (error) {
+      console.warn('Issue resolution persistence failed; keeping the optimistic update:', error);
+    }
+  };
+
+  const routeIssueToSales = async (sampleNo: string, issueId: string) => {
+    const request = requests.find(req => req.sampleNo === sampleNo);
+    const issue = request?.issues?.find(item => item.id === issueId);
+    if (!request || !issue) return;
+
+    const deliveryIssue = issue.department === 'LOGISTIC' || /DELIVERY|CUSTOMER_REJECT|FAILED/i.test(issue.issueType);
+    const currentOwner = deliveryIssue ? 'Sale + Co-Sale' : 'Sale';
+    const currentProcess = deliveryIssue ? 'DELIVERY_ISSUE_ACTION_REQUIRED' : 'ISSUE_ACTION_REQUIRED';
+
+    setRequests(prev => prev.map(req => req.sampleNo !== sampleNo ? req : {
+      ...req,
+      currentOwner,
+      currentProcess,
+      updatedTimestamp: new Date().toISOString()
+    }));
+
+    try {
+      await sheetService.updateSampleRequest(sampleNo, {
+        Current_Owner: currentOwner,
+        Current_Process: currentProcess,
+        Updated_Timestamp: new Date().toISOString()
+      });
+      await sheetService.writeAuditLog({
+        user: user?.name || 'Authorized Staff',
+        userEmail: user?.email || '',
+        role: user?.role || 'AUTHORIZED_USER',
+        module: 'ISSUE_CENTER',
+        sampleNo,
+        action: 'ROUTE_ISSUE_TO_SALES',
+        targetId: issueId,
+        reason: `ส่งกลับผู้รับผิดชอบ: ${currentOwner}`
+      });
+    } catch (error) {
+      console.warn('Issue routing persistence failed; keeping the optimistic update:', error);
+    }
   };
 
   // 7. Advance Delivery Pipeline (Strict Gate Enforcement & Auto-Complete on Delivered with No Open Issues)
@@ -1557,6 +1640,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         updateLogisticTask,
         reportIssue,
         resolveIssue,
+        routeIssueToSales,
         companySettings,
         updateCompanySettings,
         recentEmails,

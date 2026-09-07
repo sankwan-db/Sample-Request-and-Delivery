@@ -460,6 +460,23 @@ export async function createIssue(issueData: any): Promise<any> {
   return handleResponse(res);
 }
 
+export async function getIssues(sampleNo?: string): Promise<any[]> {
+  const query = sampleNo ? `?sampleNo=${encodeURIComponent(sampleNo)}` : '';
+  const res = await fetch(`/api/services/getIssues${query}`, {
+    headers: getAuthHeader()
+  });
+  return handleResponse<any[]>(res);
+}
+
+export async function resolveIssue(issueId: string, resolution: string, resolvedBy: string): Promise<any> {
+  const res = await fetch('/api/services/resolveIssue', {
+    method: 'POST',
+    headers: getAuthHeader(),
+    body: JSON.stringify({ issueId, resolution, resolvedBy })
+  });
+  return handleResponse(res);
+}
+
 export async function writeAuditLog(auditData: any): Promise<any> {
   const res = await fetch('/api/services/writeAuditLog', {
     method: 'POST',
