@@ -25,6 +25,7 @@ import { EmailSettingsPage } from './pages/EmailSettingsPage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { MasterSettingsPage } from './pages/MasterSettingsPage';
 import { IssueCenterPage } from './pages/IssueCenterPage';
+import { AllocationPage } from './modules/allocation/AllocationPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 export default function App() {
@@ -40,6 +41,8 @@ export default function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="/dashboard/overview" element={<Dashboard />} />
                 <Route path="/dashboard/control-tower" element={<ControlTowerPage />} />
+                <Route path="/allocation" element={<AllocationPage />} />
+                <Route path="/public/requirement" element={<AllocationPage />} />
                 <Route path="/control-tower" element={<ControlTowerPage />} />
                 
                 {/* Operations */}
