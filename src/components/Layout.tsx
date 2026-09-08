@@ -339,6 +339,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
   // Create a mapping from subItemName (in Layout.tsx) to allowedMenus options (in UserManagementPage.tsx)
   const isSubItemAllowed = (subItemName: string, allowedMenus: string[]): boolean => {
     if (!allowedMenus || allowedMenus.length === 0) return true;
+    if (allowedMenus.includes('*')) return true;
     
     const mapping: Record<string, string[]> = {
       // Dashboard subitems
@@ -408,6 +409,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
 
   const isItemAllowed = (itemName: string, allowedMenus: string[]): boolean => {
     if (!allowedMenus || allowedMenus.length === 0) return true;
+    if (allowedMenus.includes('*')) return true;
     
     const mapping: Record<string, string[]> = {
       'Dashboard': ['Dashboard & Overview'],
