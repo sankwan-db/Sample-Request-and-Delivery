@@ -8,14 +8,20 @@ import {
   FileCheck2, ShieldCheck, ChevronRight, Eye, Edit3, X, 
   Send, AlertCircle, RefreshCw, Layers, Search
 } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { SamplePDFModal } from '../components/SamplePDFModal';
 
 export function DeliveryOperationsPage() {
   const { requests, advanceDeliveryPipeline, reportIssue, resolveIssue } = useRequests();
   const { user } = useAuth();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<'ACTIVE_DELIVERY' | 'COMPLETED' | 'ALL'>('ACTIVE_DELIVERY');
+  const [activeTab, setActiveTab] = useState<'ACTIVE_DELIVERY' | 'ISSUES' | 'COMPLETED' | 'ALL'>(
+    location.pathname === '/logistic/issue' ? 'ISSUES' : 'ACTIVE_DELIVERY'
+  );
+  React.useEffect(() => {
+    if (location.pathname === '/logistic/issue') setActiveTab('ISSUES');
+  }, [location.pathname]);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Pipeline status update modal
@@ -80,8 +86,12 @@ export function DeliveryOperationsPage() {
   ];
 
   const deliveryRequests = requests.filter(r => deliveryStages.includes(r.currentStatus));
+  const deliveryIssueRequests = requests.filter(req => (req.issues || []).some(issue =>
+    issue.status === 'OPEN' && (issue.department === 'LOGISTIC' || /DELIVERY|DELAY|CUSTOMER_REJECT|FAILED/i.test(issue.issueType))
+  ));
+  const visibleRequests = activeTab === 'ISSUES' ? deliveryIssueRequests : deliveryRequests;
 
-  const filteredList = deliveryRequests.filter(req => {
+  const filteredList = visibleRequests.filter(req => {
     const isCompleted = req.currentStatus === RequestStatus.COMPLETED;
 
     if (activeTab === 'ACTIVE_DELIVERY' && isCompleted) return false;
@@ -103,6 +113,7 @@ export function DeliveryOperationsPage() {
 
   const countActive = deliveryRequests.filter(r => r.currentStatus !== RequestStatus.COMPLETED).length;
   const countCompleted = deliveryRequests.filter(r => r.currentStatus === RequestStatus.COMPLETED).length;
+  const countIssues = deliveryIssueRequests.length;
 
   return (
     <div className="flex flex-col gap-6 text-[var(--color-text-primary)]">
@@ -154,6 +165,19 @@ export function DeliveryOperationsPage() {
             <span className="bg-blue-100 text-blue-800 text-[11px] px-2 py-0.5 rounded-full font-bold">
               {countActive}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ISSUES')}
+            className={`px-4 py-2 rounded-t-md text-[13px] font-bold transition-all flex items-center gap-2 border-b-2 ${
+              activeTab === 'ISSUES'
+                ? 'border-rose-600 text-rose-700 bg-rose-50/60'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <AlertTriangle size={15} />
+            <span>Delivery Delay & Issue</span>
+            <span className="bg-rose-100 text-rose-800 text-[11px] px-2 py-0.5 rounded-full font-bold">{countIssues}</span>
           </button>
 
           <button
