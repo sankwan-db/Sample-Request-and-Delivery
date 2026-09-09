@@ -74,7 +74,7 @@ export function LogisticAssignmentPage() {
 
   // Filter requests that are past approval
   const approvedRequests = requests.filter(r => 
-    ![RequestStatus.DRAFT, RequestStatus.LOGISTIC_PRE_CHECK, RequestStatus.WAITING_APPROVAL, RequestStatus.REJECTED].includes(r.currentStatus)
+    ![RequestStatus.DRAFT, RequestStatus.LOGISTIC_PRE_CHECK, RequestStatus.WAITING_APPROVAL, RequestStatus.REJECTED, RequestStatus.CANCELLED].includes(r.currentStatus)
   );
 
   const filteredList = approvedRequests.filter(req => {
