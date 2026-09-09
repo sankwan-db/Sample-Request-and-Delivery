@@ -317,6 +317,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             totalQty: Number(item.Total_Qty) || 0,
             totalValue: Number(item.Grand_Total) || 0,
             currentStatus: (item.Current_Status || 'DRAFT') as any,
+            isLocked: ['APPROVED', 'PROCESSING', 'READY TO DELIVER', 'PICKED UP', 'OUT FOR DELIVERY', 'ARRIVED', 'DELIVERED', 'CUSTOMER RECEIVED', 'COMPLETED'].includes(item.Current_Status),
             currentProcess: item.Current_Process || '',
             currentOwner: item.Current_Owner || '',
             lines: Array.isArray(item.lines) ? item.lines.map((l: any) => ({
@@ -826,6 +827,11 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
     const finalApproverName = approverName || user?.name || 'Sale Manager';
     const finalApproverEmail = approverEmail || user?.email || 'manager@example.com';
+    const targetRequest = requests.find(req => req.sampleNo === sampleNo);
+    if (!targetRequest) throw new Error('ไม่พบคำขอตัวอย่างที่ต้องการอนุมัติ');
+    if (targetRequest.currentStatus !== RequestStatus.WAITING_APPROVAL || targetRequest.isLocked || targetRequest.approvals?.some(record => record.approvalStatus === 'APPROVED')) {
+      throw new Error('คำขอนี้ผ่านการอนุมัติหรือถูกดำเนินการไปแล้ว ไม่สามารถอนุมัติซ้ำได้');
+    }
 
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
@@ -984,6 +990,17 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       };
     }));
 
+    // Persist the approval transaction before the next auto-sync. This prevents
+    // a refreshed record from returning to WAITING APPROVAL and being approved twice.
+    try {
+      await sheetService.approveRequest(sampleNo, {
+        name: finalApproverName,
+        email: finalApproverEmail
+      }, comment);
+    } catch (err: any) {
+      console.warn('Approval persistence failed; keeping the optimistic update:', err.message);
+    }
+
     // 11. Write Central Audit Log
     sheetService.writeAuditLog({
       timestamp: `${dateStr} ${timeStr}`,
@@ -1049,6 +1066,15 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       };
     }));
 
+    try {
+      await sheetService.rejectRequest(sampleNo, {
+        name: finalApproverName,
+        email: finalApproverEmail
+      }, reason);
+    } catch (err: any) {
+      console.warn('Rejection persistence failed; keeping the optimistic update:', err.message);
+    }
+
     // Central Audit Log
     sheetService.writeAuditLog({
       timestamp: `${dateStr} ${timeStr}`,
@@ -1068,10 +1094,20 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
     const finalApproverName = approverName || user?.name || 'Sale Manager';
     const finalApproverEmail = approverEmail || user?.email || 'manager@example.com';
+    const targetRequest = requests.find(req => req.sampleNo === sampleNo);
+    if (!targetRequest) throw new Error('ไม่พบคำขอตัวอย่างที่ต้องการส่งกลับแก้ไข');
+    const documentWasDistributed = Boolean(
+      targetRequest.isLocked ||
+      targetRequest.documentRegister ||
+      targetRequest.approvals?.some(record => record.approvalStatus === 'APPROVED')
+    );
+    const nextRevision = documentWasDistributed
+      ? incrementRevisionString(targetRequest.revision || 'REV.00')
+      : (targetRequest.revision || 'REV.00');
 
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
-      const newRev = incrementRevisionString(req.revision || 'REV.00');
+      const newRev = nextRevision;
 
       const emailLog: EmailLogEntry = {
         emailLogId: `EML-${Date.now()}`,
@@ -1084,7 +1120,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         subject: `[REVISION REQUESTED] ${req.sampleNo} (${newRev}) : มีรายการแก้ไขที่ต้องปรับปรุง - ${req.customerName}`,
         templateCode: 'TMPL_REVISION_REQUEST',
         sendStatus: 'SENT',
-        body: `คำขอ ${req.sampleNo} ได้รับการร้องขอให้แก้ไขโดย ${finalApproverName}. ส่วนที่ต้องแก้ไข: ${sections}. ข้อคิดเห็น: ${remark}. ระบบปรับเป็นรุ่น ${newRev}`
+        body: `คำขอ ${req.sampleNo} ได้รับการร้องขอให้แก้ไขโดย ${finalApproverName}. ส่วนที่ต้องแก้ไข: ${sections}. ข้อคิดเห็น: ${remark}. ${documentWasDistributed ? `ระบบปรับเป็นรุ่น ${newRev}` : `ยังคงเลขรุ่น ${newRev} เนื่องจากเอกสารยังไม่เคยอนุมัติและส่งให้ส่วนงาน`}`
       };
 
       triggerEmailNotification(emailLog);
@@ -1117,6 +1153,18 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         updatedTimestamp: now.toISOString()
       };
     }));
+
+    try {
+      await sheetService.requestRevision(sampleNo, {
+        name: finalApproverName,
+        email: finalApproverEmail
+      }, sections, remark);
+      if (documentWasDistributed) {
+        await sheetService.updateSampleRequest(sampleNo, { Revision_No: nextRevision });
+      }
+    } catch (err: any) {
+      console.warn('Revision persistence failed; keeping the optimistic update:', err.message);
+    }
 
     // Central Audit Log
     sheetService.writeAuditLog({
