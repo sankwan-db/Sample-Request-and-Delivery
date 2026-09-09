@@ -26,6 +26,7 @@ export function RequestDetail() {
     completeCoSaleTask,
     completeLogisticAssignment,
     advanceDeliveryPipeline,
+    reportIssue,
     rdDepartments,
     changeDepartmentOnDraft
   } = useRequests();
@@ -55,7 +56,8 @@ export function RequestDetail() {
   const [rdActualQty, setRdActualQty] = useState(request.totalQty || 5);
   const [rdRemark, setRdRemark] = useState('เตรียมสินค้าและตรวจสอบอุณหภูมิเรียบร้อย');
 
-  const [soNumber, setSoNumber] = useState('SO-2026-09452');
+  const isFreeSample = !request.lines.some(line => Number(line.value || (line.requestQty * (line.price || 0))) > 0);
+  const [soNumber, setSoNumber] = useState(isFreeSample ? 'ADJ-SAMPLE-2026-00001' : 'SO-2026-09452');
   const [soDate, setSoDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [vehicleType, setVehicleType] = useState('4-Wheel Cold Truck (0-4°C)');
@@ -139,11 +141,23 @@ export function RequestDetail() {
   };
 
   const handleCoSaleComplete = () => {
-    if (!soNumber.trim()) return alert('กรุณาระบุเลขที่ Sales Order');
+    if (!soNumber.trim()) return alert(isFreeSample ? 'กรุณาระบุเลขอ้างอิงการปรับสต็อก' : 'กรุณาระบุเลขที่ Sales Order');
     completeCoSaleTask(request.sampleNo, {
       soNumber,
       soDate,
-      erpStatus: 'RELEASED'
+      erpStatus: 'RELEASED',
+      transactionType: isFreeSample ? 'FREE_SAMPLE_STOCK_ADJUSTMENT' : 'SALES_ORDER'
+    });
+  };
+
+  const reportDepartmentBlocker = (department: 'RD' | 'LOGISTIC', issueType: string, promptLabel: string) => {
+    const description = window.prompt(promptLabel);
+    if (!description?.trim()) return;
+    reportIssue(request.sampleNo, {
+      department,
+      issueType,
+      description: description.trim(),
+      reportedBy: user?.name || `${department} Staff`
     });
   };
 
@@ -557,12 +571,10 @@ export function RequestDetail() {
                 </div>
 
                 {request.rdStatus !== 'COMPLETED' && (role === 'RD' || role === 'ADMIN') && isApproved && (
-                  <button 
-                    onClick={handleRdComplete}
-                    className="mt-3 w-full bg-purple-700 hover:bg-purple-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs"
-                  >
-                    ยืนยัน RD เตรียมเสร็จ
-                  </button>
+                  <div className="mt-3 grid gap-1.5">
+                    <button onClick={handleRdComplete} className="w-full bg-purple-700 hover:bg-purple-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs">ยืนยัน RD เตรียมเสร็จ</button>
+                    <button onClick={() => reportDepartmentBlocker('RD', 'RD_CANNOT_PREPARE', 'ระบุสาเหตุที่ RD ไม่สามารถเตรียมตัวอย่างได้')} className="w-full border border-rose-300 bg-rose-50 text-rose-700 text-[11px] py-1.5 rounded font-bold">ไม่สามารถเตรียมได้ / ส่งกลับ Sales</button>
+                  </div>
                 )}
               </div>
 
@@ -577,16 +589,16 @@ export function RequestDetail() {
                     </span>
                     {request.coSaleStatus === 'COMPLETED' ? (
                       <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                        <Check size={12} /> SO เรียบร้อย
+                        <Check size={12} /> {isFreeSample ? 'ปรับสต็อกแล้ว' : 'SO เรียบร้อย'}
                       </span>
                     ) : (
                       <span className="text-[10px] text-amber-700 font-semibold flex items-center gap-1">
-                        <Clock size={11} /> รอเปิด SO
+                        <Clock size={11} /> {isFreeSample ? 'รอปรับสต็อก' : 'รอเปิด SO'}
                       </span>
                     )}
                   </div>
                   <h4 className="text-[12px] font-bold text-slate-900 mb-1">
-                    เปิด Sales Order ใน ERP
+                    {isFreeSample ? 'บันทึก Sample Stock Adjustment ใน ERP' : 'เปิด Sales Order ใน ERP'}
                   </h4>
                   <p className="text-[10px] text-slate-600 mb-3">
                     ผู้รับผิดชอบ: {request.coSaleTask?.assignedTo || 'Co-Sale Specialist'}
@@ -594,19 +606,19 @@ export function RequestDetail() {
 
                   {request.coSaleStatus === 'COMPLETED' ? (
                     <div className="bg-white p-2 rounded border border-emerald-200 text-[10px] space-y-1">
-                      <div><span className="text-slate-500">SO No: </span><span className="font-mono font-bold text-blue-900">{request.coSaleTask?.soNumber || soNumber}</span></div>
+                      <div><span className="text-slate-500">{isFreeSample ? 'Adjustment Ref: ' : 'SO No: '}</span><span className="font-mono font-bold text-blue-900">{request.coSaleTask?.stockAdjustmentRef || request.coSaleTask?.soNumber || soNumber}</span></div>
                       <div><span className="text-slate-500">วันที่ SO: </span><span className="font-medium">{request.coSaleTask?.soDate || soDate}</span></div>
                       <div><span className="text-slate-500">สถานะ ERP: </span><span className="font-bold text-emerald-700">RELEASED</span></div>
                     </div>
                   ) : (
                     <div className="space-y-1.5 text-[11px]">
                       <div>
-                        <label className="text-[9px] font-bold text-slate-500 uppercase block">เลขที่ Sales Order (SO)</label>
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">{isFreeSample ? 'Stock Adjustment Reference' : 'เลขที่ Sales Order (SO)'}</label>
                         <input 
                           type="text" 
                           value={soNumber} 
                           onChange={e => setSoNumber(e.target.value)}
-                          placeholder="SO-2026-XXXXX"
+                          placeholder={isFreeSample ? 'ADJ-SAMPLE-2026-XXXXX' : 'SO-2026-XXXXX'}
                           className="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-[11px] font-mono"
                         />
                       </div>
@@ -628,7 +640,7 @@ export function RequestDetail() {
                     onClick={handleCoSaleComplete}
                     className="mt-3 w-full bg-blue-700 hover:bg-blue-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs"
                   >
-                    ยืนยันเปิด SO แล้ว
+                    {isFreeSample ? 'ยืนยันปรับ Sample Stock แล้ว' : 'ยืนยันเปิด SO แล้ว'}
                   </button>
                 )}
               </div>
@@ -690,12 +702,10 @@ export function RequestDetail() {
                 </div>
 
                 {request.logisticStatus !== 'COMPLETED' && (role === 'LOGISTIC' || role === 'ADMIN') && isApproved && (
-                  <button 
-                    onClick={handleLogisticComplete}
-                    className="mt-3 w-full bg-teal-700 hover:bg-teal-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs"
-                  >
-                    ยืนยันจัดสรรรถและคนขับ
-                  </button>
+                  <div className="mt-3 grid gap-1.5">
+                    <button onClick={handleLogisticComplete} className="w-full bg-teal-700 hover:bg-teal-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs">ยืนยันจัดสรรรถและคนขับ</button>
+                    <button onClick={() => reportDepartmentBlocker('LOGISTIC', 'VEHICLE_NOT_AVAILABLE', 'ระบุสาเหตุที่ไม่สามารถจัดรถได้ และทางเลือกที่เสนอ')} className="w-full border border-rose-300 bg-rose-50 text-rose-700 text-[11px] py-1.5 rounded font-bold">ไม่มีรถพร้อม / แจ้ง Action Required</button>
+                  </div>
                 )}
               </div>
 

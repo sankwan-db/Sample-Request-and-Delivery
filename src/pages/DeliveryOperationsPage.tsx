@@ -553,6 +553,8 @@ export function DeliveryOperationsPage() {
                   <option value="TEMPERATURE_WARNING">อุณหภูมิตู้แช่เริ่มเบี่ยงเบนจากเกณฑ์</option>
                   <option value="WRONG_ADDRESS">ที่อยู่ปลายทางไม่ตรงกับเอกสาร</option>
                   <option value="CUSTOMER_REFUSED">ลูกค้าปฏิเสธการรับสินค้า</option>
+                  <option value="CUSTOMER_RESCHEDULE">ลูกค้าขอเลื่อนวันจัดส่ง</option>
+                  <option value="VEHICLE_NOT_AVAILABLE">รถหรือคนขับไม่พร้อม</option>
                   <option value="OTHER">อื่นๆ</option>
                 </select>
               </div>

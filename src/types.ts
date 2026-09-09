@@ -14,7 +14,8 @@ export enum RequestStatus {
   ARRIVED = 'ARRIVED',
   DELIVERED = 'DELIVERED',
   CUSTOMER_RECEIVED = 'CUSTOMER RECEIVED',
-  COMPLETED = 'COMPLETED'
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
 }
 
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
@@ -198,6 +199,8 @@ export interface CoSaleTaskData {
   taskCreateTime: string;
   startTime?: string;
   soNumber?: string;
+  transactionType?: 'SALES_ORDER' | 'FREE_SAMPLE_STOCK_ADJUSTMENT';
+  stockAdjustmentRef?: string;
   soDate?: string;
   erpStatus?: 'NOT_CREATED' | 'DRAFT' | 'RELEASED' | 'HOLD';
   documentStatus?: 'PENDING' | 'READY';
@@ -340,10 +343,19 @@ export interface RequestIssue {
   reportedBy: string;
   reportedAt: string;
   status: 'OPEN' | 'RESOLVED';
+  revisionRequired?: boolean;
+  financialImpact?: boolean;
+  recommendedAction?: IssueDecision;
+  decision?: IssueDecision;
+  decisionRemark?: string;
+  previousOwner?: string;
+  previousProcess?: string;
   resolvedBy?: string;
   resolvedAt?: string;
   resolutionRemark?: string;
 }
+
+export type IssueDecision = 'RESOLVE_OPERATIONAL' | 'RETURN_FOR_REVISION' | 'RESCHEDULE' | 'CANCEL';
 
 export interface SampleRequest {
   id: string;

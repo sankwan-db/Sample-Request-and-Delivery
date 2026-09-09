@@ -6,7 +6,7 @@ import {
   RDDepartmentMaster, DocumentRunningNo, AuditLogEntry,
   VoidedSampleNo, ReadyToDeliverGateResult, EmailEventCode,
   formatSamplePdfFileName, getSamplePdfDrivePath,
-  CompanySettings, RequestIssue
+  CompanySettings, RequestIssue, IssueDecision
 } from '../types';
 import { 
   INITIAL_RD_DEPARTMENTS, INITIAL_RUNNING_NUMBERS, 
@@ -82,7 +82,7 @@ interface RequestContextType {
   rejectRequest: (sampleNo: string, reason: string, approverName?: string, approverEmail?: string) => Promise<void>;
   requestRevision: (sampleNo: string, sections: string, remark: string, approverName?: string, approverEmail?: string) => Promise<void>;
   completeRdTask: (sampleNo: string, data: { lot: string; expiryDate: string; actualQty: number; remark?: string }) => void;
-  completeCoSaleTask: (sampleNo: string, data: { soNumber: string; soDate: string; erpStatus: 'RELEASED' | 'DRAFT' }) => void;
+  completeCoSaleTask: (sampleNo: string, data: { soNumber: string; soDate: string; erpStatus: 'RELEASED' | 'DRAFT'; transactionType?: CoSaleTaskData['transactionType'] }) => void;
   completeLogisticAssignment: (sampleNo: string, data: { vehicleType: string; vehicleNo: string; driverName: string; driverPhone: string }) => void;
   advanceDeliveryPipeline: (sampleNo: string, nextStatus: RequestStatus, extra?: { podUrl?: string; receiverName?: string }) => void;
   recentEmails: EmailLogEntry[];
@@ -96,6 +96,7 @@ interface RequestContextType {
   reportIssue: (sampleNo: string, issue: Omit<RequestIssue, 'id' | 'reportedAt' | 'status'>) => Promise<void>;
   resolveIssue: (sampleNo: string, issueId: string, resolutionRemark: string) => Promise<void>;
   routeIssueToSales: (sampleNo: string, issueId: string) => Promise<void>;
+  applyIssueDecision: (sampleNo: string, issueId: string, decision: IssueDecision, remark: string, newDeliveryDate?: string) => Promise<void>;
   
   // Updates for Task Workflows
   updateCoSaleTask: (sampleNo: string, data: Partial<CoSaleTaskData>) => void;
@@ -1259,7 +1260,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 5. Co-Sale Completes SO Creation
-  const completeCoSaleTask = (sampleNo: string, data: { soNumber: string; soDate: string; erpStatus: 'RELEASED' | 'DRAFT' }) => {
+  const completeCoSaleTask = (sampleNo: string, data: { soNumber: string; soDate: string; erpStatus: 'RELEASED' | 'DRAFT'; transactionType?: CoSaleTaskData['transactionType'] }) => {
     const now = new Date();
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
@@ -1278,6 +1279,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           slaStatus: 'NORMAL'
         }),
         soNumber: data.soNumber,
+        transactionType: data.transactionType || 'SALES_ORDER',
+        stockAdjustmentRef: data.transactionType === 'FREE_SAMPLE_STOCK_ADJUSTMENT' ? data.soNumber : undefined,
         soDate: data.soDate,
         erpStatus: data.erpStatus,
         documentStatus: 'READY',
@@ -1463,23 +1466,63 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
   // Report Issue (Parts 72, 73, 74, 75)
   const reportIssue = async (sampleNo: string, issueData: Omit<RequestIssue, 'id' | 'reportedAt' | 'status'>) => {
     const now = new Date();
+    const targetRequest = requests.find(req => req.sampleNo === sampleNo);
+    const searchable = `${issueData.issueType} ${issueData.description}`.toUpperCase();
+    const revisionRequired = issueData.revisionRequired ?? /CUSTOMER_(REFUSED|REJECT)|WRONG_ADDRESS|RESCHEDULE|CHANGE_(PRODUCT|QUANTITY|ADDRESS)|DELIVERY_TERMS|PRODUCT_CHANGE|QUANTITY_CHANGE/.test(searchable);
+    const financialImpact = issueData.financialImpact ?? /CREDIT|PAYMENT|PRICE|INVOICE|SO_|CUSTOMER_(REFUSED|REJECT)/.test(searchable);
+    const recommendedAction: IssueDecision = issueData.recommendedAction || (revisionRequired ? 'RETURN_FOR_REVISION' : 'RESOLVE_OPERATIONAL');
     const newIssue: RequestIssue = {
       id: `ISS-${Date.now()}`,
       ...issueData,
+      revisionRequired,
+      financialImpact,
+      recommendedAction,
+      previousOwner: issueData.previousOwner || targetRequest?.currentOwner,
+      previousProcess: issueData.previousProcess || targetRequest?.currentProcess,
       status: 'OPEN',
       reportedAt: `${now.toISOString().split('T')[0]} ${now.toTimeString().substring(0, 5)}`
     };
+
+    const route = issueData.department === 'RD'
+      ? { owner: 'Sale', process: 'RD_ISSUE_ACTION_REQUIRED' }
+      : issueData.department === 'CO_SALE'
+        ? { owner: 'Sale + Co-Sale', process: 'FINANCIAL_ACTION_REQUIRED' }
+        : issueData.department === 'LOGISTIC'
+          ? { owner: revisionRequired ? 'Sale + Co-Sale' : 'Logistic + Sale', process: revisionRequired ? 'DELIVERY_REVISION_REQUIRED' : 'DELIVERY_ACTION_REQUIRED' }
+          : { owner: 'Sale', process: 'ISSUE_ACTION_REQUIRED' };
 
     setRequests(prev => prev.map(req => {
       if (req.sampleNo !== sampleNo) return req;
       return {
         ...req,
         issues: [newIssue, ...(req.issues || [])],
+        currentOwner: route.owner,
+        currentProcess: route.process,
         updatedTimestamp: now.toISOString()
       };
     }));
 
+    if (targetRequest) {
+      const eventCode = issueData.department === 'RD'
+        ? EmailEventCode.RD_ISSUE
+        : issueData.department === 'CO_SALE'
+          ? EmailEventCode.SO_ISSUE
+          : EmailEventCode.DELIVERY_DELAY;
+      dispatchNotification({
+        eventCode,
+        request: { ...targetRequest, currentOwner: route.owner, currentProcess: route.process },
+        actor: { name: issueData.reportedBy, email: user?.email || '', role: user?.role || issueData.department },
+        issueRemark: issueData.description,
+        customMessage: revisionRequired ? 'ต้องส่งกลับฝ่ายขายเพื่อแก้ไขเอกสารและอนุมัติใหม่' : 'แก้ไขเชิงปฏิบัติการโดยไม่เพิ่ม Revision'
+      }).then(log => triggerEmailNotification(log));
+    }
+
     try {
+      await sheetService.updateSampleRequest(sampleNo, {
+        Current_Owner: route.owner,
+        Current_Process: route.process,
+        Updated_Timestamp: now.toISOString()
+      });
       const saved = await sheetService.createIssue({
         sampleNo,
         process: issueData.department,
@@ -1577,6 +1620,85 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.warn('Issue routing persistence failed; keeping the optimistic update:', error);
     }
+  };
+
+  const applyIssueDecision = async (
+    sampleNo: string,
+    issueId: string,
+    decision: IssueDecision,
+    remark: string,
+    newDeliveryDate?: string
+  ) => {
+    const request = requests.find(req => req.sampleNo === sampleNo);
+    const issue = request?.issues?.find(item => item.id === issueId);
+    if (!request || !issue) throw new Error('ไม่พบ Issue ที่ต้องการดำเนินการ');
+    if (!remark.trim()) throw new Error('กรุณาระบุเหตุผลหรือผลการดำเนินการ');
+    if (decision === 'RESCHEDULE' && !newDeliveryDate) throw new Error('กรุณาระบุวันจัดส่งใหม่');
+
+    setRequests(prev => prev.map(req => req.sampleNo !== sampleNo ? req : {
+      ...req,
+      issues: (req.issues || []).map(item => item.id !== issueId ? item : {
+        ...item,
+        decision,
+        decisionRemark: remark.trim()
+      })
+    }));
+
+    if (decision === 'RESOLVE_OPERATIONAL') {
+      await resolveIssue(sampleNo, issueId, remark.trim());
+      if (request.currentStatus !== RequestStatus.DELIVERED && (issue.previousOwner || issue.previousProcess)) {
+        const timestamp = new Date().toISOString();
+        const restoredOwner = issue.previousOwner || request.currentOwner;
+        const restoredProcess = issue.previousProcess || request.currentProcess;
+        setRequests(prev => prev.map(req => req.sampleNo !== sampleNo ? req : {
+          ...req,
+          currentOwner: restoredOwner,
+          currentProcess: restoredProcess,
+          updatedTimestamp: timestamp
+        }));
+        await sheetService.updateSampleRequest(sampleNo, {
+          Current_Owner: restoredOwner,
+          Current_Process: restoredProcess,
+          Updated_Timestamp: timestamp
+        });
+      }
+      return;
+    }
+
+    if (decision === 'CANCEL') {
+      await resolveIssue(sampleNo, issueId, `ยกเลิกคำขอ: ${remark.trim()}`);
+      const timestamp = new Date().toISOString();
+      setRequests(prev => prev.map(req => req.sampleNo !== sampleNo ? req : {
+        ...req,
+        isLocked: true,
+        currentStatus: RequestStatus.CANCELLED,
+        currentProcess: 'CANCELLED_BY_EXCEPTION_DECISION',
+        currentOwner: 'Closed (Cancelled)',
+        updatedTimestamp: timestamp
+      }));
+      await sheetService.updateSampleRequest(sampleNo, {
+        Current_Status: RequestStatus.CANCELLED,
+        Current_Process: 'CANCELLED_BY_EXCEPTION_DECISION',
+        Current_Owner: 'Closed (Cancelled)',
+        Updated_Timestamp: timestamp
+      });
+      return;
+    }
+
+    if (decision === 'RESCHEDULE' && newDeliveryDate) {
+      setRequests(prev => prev.map(req => req.sampleNo !== sampleNo ? req : {
+        ...req,
+        deliveryDate: newDeliveryDate,
+        updatedTimestamp: new Date().toISOString()
+      }));
+      await sheetService.updateSampleRequest(sampleNo, { Delivery_Date: newDeliveryDate });
+    }
+
+    const sections = decision === 'RESCHEDULE'
+      ? 'วันและเงื่อนไขการจัดส่ง'
+      : `ข้อมูลที่เกี่ยวข้องกับ ${issue.issueType.replaceAll('_', ' ')}`;
+    await requestRevision(sampleNo, sections, remark.trim(), user?.name, user?.email);
+    await resolveIssue(sampleNo, issueId, `${decision === 'RESCHEDULE' ? `เลื่อนกำหนดส่งเป็น ${newDeliveryDate}; ` : ''}ส่งกลับฝ่ายขายเพื่อแก้ไขและอนุมัติใหม่: ${remark.trim()}`);
   };
 
   // 7. Advance Delivery Pipeline (Strict Gate Enforcement & Auto-Complete on Delivered with No Open Issues)
@@ -1689,6 +1811,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         reportIssue,
         resolveIssue,
         routeIssueToSales,
+        applyIssueDecision,
         companySettings,
         updateCompanySettings,
         recentEmails,
