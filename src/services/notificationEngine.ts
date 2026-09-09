@@ -113,7 +113,7 @@ export const NOTIFICATION_RULES: Record<string, {
     includeApprover: true,
     includeDepartmentLead: false,
     subjectTemplate: '[REVISION REQUIRED] {{sampleNo}} : ส่งกลับเพื่อให้แก้ไขข้อมูล - {{customerName}}',
-    bodyTemplate: 'คำขอตัวอย่าง {{sampleNo}} ถูกส่งกลับเพื่อแก้ไขข้อมูลในหัวข้อ: {{customMessage}} เมื่อแก้ไขเสร็จแล้วระบบจะเพิ่มเลข Revision ขึ้นโดยอัตโนมัติ'
+    bodyTemplate: 'คำขอตัวอย่าง {{sampleNo}} ถูกส่งกลับเพื่อแก้ไขข้อมูลในหัวข้อ: {{customMessage}} ระบบจะเพิ่มเลข Revision เฉพาะกรณีที่เอกสารเคยอนุมัติและส่งให้ส่วนงานแล้ว'
   },
   [EmailEventCode.RD_TASK_CREATED]: {
     eventTitle: 'งานจัดเตรียมตัวอย่าง RD ถูกสร้างขึ้น',
