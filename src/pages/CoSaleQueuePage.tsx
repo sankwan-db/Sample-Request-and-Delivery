@@ -35,9 +35,12 @@ export function CoSaleQueuePage() {
   const [issueType, setIssueType] = useState('PRICE_DISCREPANCY');
   const [issueDesc, setIssueDesc] = useState('');
 
+  const isFreeSample = (req: SampleRequest) => !req.lines.some(line => Number(line.value || (line.requestQty * (line.price || 0))) > 0);
+
   const openEditDrawer = (req: SampleRequest) => {
     setEditingRequest(req);
-    setSoNumber(req.coSaleTask?.soNumber || `SO-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`);
+    const freeSample = isFreeSample(req);
+    setSoNumber(req.coSaleTask?.stockAdjustmentRef || req.coSaleTask?.soNumber || `${freeSample ? 'ADJ-SAMPLE' : 'SO'}-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`);
     setSoDate(req.coSaleTask?.soDate || new Date().toISOString().split('T')[0]);
     setErpStatus(req.coSaleTask?.erpStatus || 'DRAFT');
     setDocumentStatus(req.coSaleTask?.documentStatus || 'PENDING');
@@ -47,8 +50,9 @@ export function CoSaleQueuePage() {
   const handleSaveSO = (asCompleted: boolean = false) => {
     if (!editingRequest) return;
     
+    const freeSample = isFreeSample(editingRequest);
     if (asCompleted && !soNumber.trim()) {
-      alert('กรุณาระบุเลขที่ SO (Sales Order Number)');
+      alert(freeSample ? 'กรุณาระบุเลขอ้างอิงการปรับสต็อกตัวอย่าง' : 'กรุณาระบุเลขที่ SO (Sales Order Number)');
       return;
     }
 
@@ -56,7 +60,8 @@ export function CoSaleQueuePage() {
       completeCoSaleTask(editingRequest.sampleNo, {
         soNumber,
         soDate: soDate || new Date().toISOString().split('T')[0],
-        erpStatus: erpStatus === 'RELEASED' ? 'RELEASED' : 'RELEASED'
+        erpStatus: 'RELEASED',
+        transactionType: freeSample ? 'FREE_SAMPLE_STOCK_ADJUSTMENT' : 'SALES_ORDER'
       });
     } else {
       updateCoSaleTask(editingRequest.sampleNo, {
@@ -94,7 +99,7 @@ export function CoSaleQueuePage() {
 
   // Filter requests based on queues (Part 72)
   const approvedRequests = requests.filter(r => 
-    ![RequestStatus.DRAFT, RequestStatus.LOGISTIC_PRE_CHECK, RequestStatus.WAITING_APPROVAL, RequestStatus.REJECTED].includes(r.currentStatus)
+    ![RequestStatus.DRAFT, RequestStatus.LOGISTIC_PRE_CHECK, RequestStatus.WAITING_APPROVAL, RequestStatus.REJECTED, RequestStatus.CANCELLED].includes(r.currentStatus)
   );
 
   const filteredList = approvedRequests.filter(req => {
@@ -155,7 +160,7 @@ export function CoSaleQueuePage() {
                 Co-Sale Work Queue & Sales Order Management
               </h1>
               <p className="text-[12px] text-slate-500">
-                จัดการสร้าง Sales Order (SO) ในระบบ ERP, จัดการเอกสารประกอบ, และปลดล็อก Gate สำหรับการจัดส่ง
+                รายการคิดเงินสร้าง Sales Order; รายการฟรีบันทึก Stock Adjustment ใน ERP ก่อนปลดล็อก Gate
               </p>
             </div>
           </div>
@@ -482,23 +487,28 @@ export function CoSaleQueuePage() {
               </div>
 
               {/* Editable Fields (PART 72) */}
+              <div className={`rounded border p-3 text-[11px] font-semibold ${isFreeSample(editingRequest) ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                {isFreeSample(editingRequest)
+                  ? 'FREE SAMPLE — ไม่สร้าง SO: บันทึกเลขอ้างอิง Stock Adjustment / Sample Stock Movement'
+                  : 'CHARGE SAMPLE — ต้องสร้างและ Release Sales Order ใน ERP'}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    SO Number (เลขที่ Sales Order ใน ERP) *
+                    {isFreeSample(editingRequest) ? 'Stock Adjustment Reference *' : 'SO Number (เลขที่ Sales Order ใน ERP) *'}
                   </label>
                   <input
                     type="text"
                     value={soNumber}
                     onChange={(e) => setSoNumber(e.target.value)}
-                    placeholder="เช่น SO-2026-09411"
+                    placeholder={isFreeSample(editingRequest) ? 'เช่น ADJ-SAMPLE-2026-00125' : 'เช่น SO-2026-09411'}
                     className="w-full bg-white border border-slate-300 rounded p-2 text-[12px] font-mono font-bold focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                    SO Date (วันที่ออกเอกสาร)
+                    {isFreeSample(editingRequest) ? 'Adjustment Date (วันที่ปรับสต็อก)' : 'SO Date (วันที่ออกเอกสาร)'}
                   </label>
                   <input
                     type="date"
@@ -520,7 +530,7 @@ export function CoSaleQueuePage() {
                     className="w-full bg-white border border-slate-300 rounded p-2 text-[12px] font-semibold focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value="DRAFT">DRAFT (ฉบับร่าง)</option>
-                    <option value="RELEASED">RELEASED (อนุมัติเปิด SO เรียบร้อย)</option>
+                    <option value="RELEASED">RELEASED ({isFreeSample(editingRequest) ? 'บันทึก Stock Movement แล้ว' : 'อนุมัติเปิด SO เรียบร้อย'})</option>
                     <option value="HOLD">HOLD (ติดเงื่อนไข / ระงับชั่วคราว)</option>
                   </select>
                 </div>
@@ -545,7 +555,7 @@ export function CoSaleQueuePage() {
                 <CheckSquare className="text-blue-600 shrink-0 mt-0.5" size={16} />
                 <div>
                   <span className="font-bold block">Ready to Deliver Gate Validation:</span>
-                  <span>เมื่อกด <strong>"บันทึกและปลดล็อกเป็น Completed"</strong> ระบบจะเรียกใช้ฟังก์ชัน <code className="bg-blue-100 px-1 py-0.5 rounded font-mono">checkReadyToDeliverGate()</code> ทันที หากแผนก RD และ Logistic พร้อมแล้ว สถานะจะปรับเป็น <strong>READY TO DELIVER</strong> โดยอัตโนมัติ</span>
+                  <span>เมื่อกด <strong>"บันทึกและปลดล็อกเป็น Completed"</strong> ระบบจะตรวจ RD + Logistic + {isFreeSample(editingRequest) ? 'Stock Adjustment' : 'SO'} หากครบแล้วจึงปรับเป็น <strong>READY TO DELIVER</strong> โดยอัตโนมัติ</span>
                 </div>
               </div>
             </div>
@@ -609,6 +619,7 @@ export function CoSaleQueuePage() {
                   <option value="PRICE_DISCREPANCY">ราคาในใบคำขอไม่ตรงกับ Master Price</option>
                   <option value="STOCK_UNAVAILABLE">สต็อกสินค้าไม่พอสำหรับตัดยอด SO</option>
                   <option value="CUSTOMER_CREDIT_HOLD">ลูกค้ารายนี้ติดสถานะ Credit Hold ใน ERP</option>
+                  <option value="CUSTOMER_PAYMENT_ISSUE">เงื่อนไขชำระเงิน / Payment มีปัญหา</option>
                   <option value="SHIPTO_NOT_FOUND">ไม่พบรหัส Ship-To ในฐานข้อมูล ERP</option>
                   <option value="OTHER">อื่นๆ</option>
                 </select>
