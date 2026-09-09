@@ -16,6 +16,7 @@ export function Layout() {
   const [dbConfigured, setDbConfigured] = React.useState<boolean | null>(null);
   const [bellOpen, setBellOpen] = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(0);
+  const { user } = useAuth();
   const { requests, refreshSequences } = useRequests();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const location = useLocation();
@@ -31,7 +32,42 @@ export function Layout() {
     }
   };
 
-  const notificationsList: any[] = [];
+  const notificationsList = React.useMemo(() => {
+    const role = user?.role || 'SALE';
+    const items: Array<{ id: string; title: string; desc: string; time: string; path: string; unread: boolean }> = [];
+
+    requests.forEach(req => {
+      const requestPath = `/sample/${encodeURIComponent(req.id || req.sampleNo)}`;
+      const openDeliveryIssue = (req.issues || []).find(issue =>
+        issue.status === 'OPEN' && (issue.department === 'LOGISTIC' || /DELIVERY|DELAY|CUSTOMER_REJECT|FAILED/i.test(issue.issueType))
+      );
+
+      if ((role === 'SALE_MANAGER' || role === 'ADMIN') && req.currentStatus === RequestStatus.WAITING_APPROVAL) {
+        items.push({ id: `approval-${req.sampleNo}`, title: 'รออนุมัติคำขอตัวอย่าง', desc: `${req.sampleNo} • ${req.customerName}`, time: 'ต้องดำเนินการ', path: '/approval', unread: true });
+      }
+      if ((role === 'LOGISTIC' || role === 'ADMIN') && req.currentStatus === RequestStatus.LOGISTIC_PRE_CHECK) {
+        items.push({ id: `precheck-${req.sampleNo}`, title: 'รอ Logistic Pre-check', desc: `${req.sampleNo} • ส่ง ${req.deliveryDate || 'ยังไม่ระบุวัน'}`, time: 'งานใหม่', path: '/logistic/check', unread: true });
+      }
+      if ((role === 'RD' || role === 'ADMIN') && req.currentStatus === RequestStatus.PROCESSING && req.rdStatus !== 'COMPLETED') {
+        items.push({ id: `rd-${req.sampleNo}`, title: 'งานจัดเตรียมตัวอย่าง RD', desc: `${req.sampleNo} • แผนก ${req.department}`, time: 'รอดำเนินการ', path: requestPath, unread: true });
+      }
+      if ((role === 'CO_SALE' || role === 'ADMIN') && req.currentStatus === RequestStatus.PROCESSING && req.coSaleStatus !== 'COMPLETED') {
+        items.push({ id: `cosale-${req.sampleNo}`, title: 'งานเปิด SO / ตัด Stock ตัวอย่าง', desc: `${req.sampleNo} • ${req.customerName}`, time: 'รอดำเนินการ', path: '/cosale/waiting', unread: true });
+      }
+      if ((role === 'SALE' || role === 'ADMIN') && req.currentStatus === RequestStatus.REVISION_REQUIRED) {
+        items.push({ id: `revision-${req.sampleNo}`, title: 'คำขอถูกส่งกลับให้แก้ไข', desc: `${req.sampleNo} • ตรวจสอบข้อคิดเห็นจากผู้อนุมัติ`, time: 'ต้องดำเนินการ', path: requestPath, unread: true });
+      }
+      if (openDeliveryIssue && ['SALE', 'CO_SALE', 'LOGISTIC', 'ADMIN'].includes(role)) {
+        items.push({ id: `issue-${req.sampleNo}-${openDeliveryIssue.id}`, title: 'Delivery Delay / Issue', desc: `${req.sampleNo} • ${openDeliveryIssue.description}`, time: 'เร่งด่วน', path: '/logistic/issue', unread: true });
+      }
+    });
+
+    return items.slice(0, 20);
+  }, [requests, user?.role]);
+
+  React.useEffect(() => {
+    setUnreadCount(notificationsList.length);
+  }, [notificationsList.length]);
 
   React.useEffect(() => {
     fetch('/api/database/status')
