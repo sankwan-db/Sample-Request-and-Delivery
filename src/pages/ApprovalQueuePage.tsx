@@ -43,10 +43,10 @@ export function ApprovalQueuePage() {
   // Filter requests
   const filteredRequests = requests.filter(req => {
     if (filterTab === 'PENDING') {
-      return req.currentStatus === RequestStatus.WAITING_APPROVAL || req.currentStatus === RequestStatus.LOGISTIC_PRE_CHECK;
+      return req.currentStatus === RequestStatus.WAITING_APPROVAL;
     }
     if (filterTab === 'APPROVED') {
-      return req.currentStatus === RequestStatus.PROCESSING || req.currentStatus === RequestStatus.COMPLETED || req.isLocked;
+      return req.currentStatus === RequestStatus.APPROVED || req.currentStatus === RequestStatus.PROCESSING || req.currentStatus === RequestStatus.COMPLETED || req.isLocked;
     }
     return true;
   }).filter(req => {

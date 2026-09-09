@@ -721,6 +721,12 @@ export async function approveRequest(
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
   const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+  const existingRequest = await getSampleRequestById(sampleNo, token, spreadsheetId);
+  const existingStatus = existingRequest?.Current_Status || existingRequest?.currentStatus;
+  if (!existingRequest) throw new Error(`Sample Request '${sampleNo}' not found`);
+  if (existingStatus !== 'WAITING APPROVAL') {
+    throw new Error(`Sample Request '${sampleNo}' is already processed (status: ${existingStatus || 'UNKNOWN'})`);
+  }
 
   const approvalRecord = {
     Approval_ID: `APP-${Date.now()}`,
@@ -796,14 +802,25 @@ export async function requestRevision(
   token?: string,
   spreadsheetId?: string
 ) {
+  const existingRequest = await getSampleRequestById(sampleNo, token, spreadsheetId);
+  if (!existingRequest) throw new Error(`Sample Request '${sampleNo}' not found`);
+  const currentStatus = existingRequest.Current_Status || existingRequest.currentStatus || '';
+  const currentRevision = existingRequest.Revision_No || existingRequest.revision || 'REV.00';
+  const documentWasDistributed = ['APPROVED', 'PROCESSING', 'READY TO DELIVER', 'PICKED UP', 'OUT FOR DELIVERY', 'ARRIVED', 'DELIVERED', 'CUSTOMER RECEIVED', 'COMPLETED'].includes(currentStatus);
+  const revisionMatch = String(currentRevision).match(/(\d+)$/);
+  const nextRevision = documentWasDistributed && revisionMatch
+    ? `REV.${String(Number(revisionMatch[1]) + 1).padStart(2, '0')}`
+    : currentRevision;
+
   await updateSampleRequest(sampleNo, {
     Current_Status: 'REVISION REQUIRED',
     Current_Process: 'SALE_REVISE',
-    Current_Owner: 'Sale Specialist'
+    Current_Owner: 'Sale Specialist',
+    Revision_No: nextRevision
   }, token, spreadsheetId);
 
-  await sendWorkflowEmail('EVENT_REVISION', sampleNo, { sections, remark }, token, spreadsheetId);
-  return { success: true, sampleNo, status: 'REVISION_REQUESTED' };
+  await sendWorkflowEmail('EVENT_REVISION', sampleNo, { sections, remark, revision: nextRevision }, token, spreadsheetId);
+  return { success: true, sampleNo, status: 'REVISION_REQUESTED', revision: nextRevision };
 }
 
 // ============================================================
