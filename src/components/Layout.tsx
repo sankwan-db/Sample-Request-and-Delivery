@@ -272,7 +272,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
           ]
         },
         {
-          name: 'Approval', icon: <CheckSquare size={15} />, roles: ['SALE_MANAGER', 'ADMIN'],
+          name: 'Approval', icon: <CheckSquare size={15} />, roles: [],
           badge: pendingApprovalsCount > 0 ? String(pendingApprovalsCount) : undefined,
           subItems: [
             { name: 'รออนุมัติ', path: '/approval' },
@@ -300,7 +300,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
         {
           name: 'Logistic', icon: <Truck size={15} />, roles: ['LOGISTIC', 'ADMIN'],
           subItems: [
-            { name: 'Logistic Check', path: '/logistic/check' },
             { name: 'จัดรถ', path: '/logistic/assign' },
             { name: 'Delivery', path: '/logistic/delivery' },
             { name: 'Delivery Issue', path: '/logistic/issue' },
