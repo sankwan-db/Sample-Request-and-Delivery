@@ -30,11 +30,14 @@ export interface SystemDatabaseConfig {
 
 const CONFIG_FILE = path.join(process.cwd(), '.db_config.json');
 
+const EXISTING_SPREADSHEET_ID = '1zBHOMGhOZlAcwjxAjYRc0G_b4svz4lgtjsitxJiR8_c';
+const EXISTING_SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${EXISTING_SPREADSHEET_ID}/edit`;
+
 const DEFAULT_CONFIG: SystemDatabaseConfig = {
-  configured: false,
-  spreadsheetId: null,
-  spreadsheetUrl: null,
-  spreadsheetTitle: 'Sample Request & Delivery',
+  configured: true,
+  spreadsheetId: EXISTING_SPREADSHEET_ID,
+  spreadsheetUrl: EXISTING_SPREADSHEET_URL,
+  spreadsheetTitle: 'Sample Request & Delivery Management System V3.0',
   setupDate: null,
   setupBy: null,
   companyInfo: {
