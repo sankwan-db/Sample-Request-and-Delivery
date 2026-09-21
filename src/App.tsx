@@ -53,9 +53,10 @@ export default function App() {
                 <Route path="/sample/all" element={<ControlTowerPage />} />
                 
                 {/* Department Work Queues */}
-                <Route path="/approval" element={<ApprovalQueuePage />} />
-                <Route path="/approval/pending" element={<ApprovalQueuePage />} />
-                <Route path="/approval/history" element={<ApprovalQueuePage />} />
+                {/* Sale Manager Approval was removed from the UAT workflow. Keep old links safe by returning to Dashboard. */}
+                <Route path="/approval" element={<Navigate to="/" replace />} />
+                <Route path="/approval/pending" element={<Navigate to="/" replace />} />
+                <Route path="/approval/history" element={<Navigate to="/" replace />} />
 
                 {/* RD Preparation */}
                 <Route path="/rd/queue" element={<Dashboard />} />
