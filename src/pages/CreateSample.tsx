@@ -1179,13 +1179,13 @@ export function CreateSample() {
         </div>
 
         {/* Product Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1150px]">
+        <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-inner">
+          <table className="w-full text-left border-collapse min-w-[1800px]">
             <thead>
               <tr className="bg-slate-100/90 text-slate-700 text-[10px] font-bold uppercase tracking-wider border-b border-slate-200">
                 <th className="py-2.5 px-2.5 w-12 text-center border-r border-slate-200">No.</th>
-                <th className="py-2.5 px-3 border-r border-slate-200 w-32">Item Code</th>
-                <th className="py-2.5 px-3 border-r border-slate-200 w-72">Product Name *</th>
+                <th className="py-2.5 px-3 border-r border-slate-200 w-40 sticky left-0 z-10 bg-slate-100">Item Code</th>
+                <th className="py-2.5 px-3 border-r border-slate-200 w-96 sticky left-[160px] z-10 bg-slate-100">Product Name *</th>
                 <th className="py-2.5 px-2.5 border-r border-slate-200 w-24 text-center">Type</th>
                 <th className="py-2.5 px-2.5 border-r border-slate-200 w-20 text-center">Fz/Ch</th>
                 <th className="py-2.5 px-2.5 border-r border-slate-200 w-20 text-right">KG/Bag</th>
