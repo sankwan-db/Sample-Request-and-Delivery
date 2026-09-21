@@ -13,7 +13,9 @@ provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 provider.addScope('https://www.googleapis.com/auth/drive.file');
 
 // Cache for token in sessionStorage to persist across refreshes
-let cachedAccessToken: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('google_access_token') : null;
+let cachedAccessToken: string | null = typeof window !== 'undefined'
+  ? (sessionStorage.getItem('google_access_token') || localStorage.getItem('google_access_token'))
+  : null;
 let isSigningIn = false;
 
 interface User {
@@ -60,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clean up any stale localStorage sessions to ensure Login screen displays on first launch
     if (typeof window !== 'undefined') {
       localStorage.removeItem('custom_user_session');
-      localStorage.removeItem('google_access_token');
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const validation = await res.json();
             
             if (validation.allowed) {
+               if (typeof window !== 'undefined') sessionStorage.setItem('google_access_token', cachedAccessToken);
                setUser({
                  email: firebaseUser.email || '',
                  name: firebaseUser.displayName || 'User',
@@ -153,7 +155,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       cachedAccessToken = credential.accessToken;
-      if (typeof window !== 'undefined') localStorage.setItem('google_access_token', credential.accessToken);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('google_access_token', credential.accessToken);
+        localStorage.setItem('google_access_token', credential.accessToken);
+      }
       setUser({
         email: result.user.email || '',
         name: result.user.displayName || 'User',
