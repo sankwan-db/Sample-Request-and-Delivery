@@ -74,41 +74,41 @@ export function CreateSample() {
   const dynamicCustomers = useMemo(() => {
     if (!ctxCustomers || ctxCustomers.length === 0) return [];
     return ctxCustomers.map((c: any) => ({
-      customerCode: c.Customer_Code || '',
-      customerName: c.Customer_Name || '',
-      customerGroup: c.Customer_Group || '',
-      salesChannel: c.Sales_Channel || '',
-      saleOwner: c.Sale_Owner || '',
-      contactName: c.Contact_Name || '',
-      contactPhone: c.Contact_Phone || '',
-      contactEmail: c.Contact_Email || '',
-      shipToCode: c.Ship_To_Code || '',
-      deliveryAddress: c.Delivery_Address || '',
-      district: c.District || '',
-      province: c.Province || '',
-      defaultRoute: c.Default_Route || '',
-      defaultDepot: c.Default_Depot || '',
-      defaultDeliveryTime: c.Default_Delivery_Time || '',
-      defaultDocuments: c.Default_Documents || '',
-      active: c.Active === 'TRUE' || c.Active === true
+      customerCode: c.Customer_Code || c.customerCode || '',
+      customerName: c.Customer_Name || c.customerName || '',
+      customerGroup: c.Customer_Group || c.customerGroup || '',
+      salesChannel: c.Sales_Channel || c.salesChannel || '',
+      saleOwner: c.Sale_Owner || c.saleOwner || '',
+      contactName: c.Contact_Name || c.contactName || '',
+      contactPhone: c.Contact_Phone || c.contactPhone || '',
+      contactEmail: c.Contact_Email || c.contactEmail || '',
+      shipToCode: c.Ship_To_Code || c.shipToCode || '',
+      deliveryAddress: c.Delivery_Address || c.deliveryAddress || '',
+      district: c.District || c.district || '',
+      province: c.Province || c.province || '',
+      defaultRoute: c.Default_Route || c.defaultRoute || '',
+      defaultDepot: c.Default_Depot || c.defaultDepot || '',
+      defaultDeliveryTime: c.Default_Delivery_Time || c.defaultDeliveryTime || '',
+      defaultDocuments: c.Default_Documents || c.defaultDocuments || '',
+      active: c.Active === 'TRUE' || c.Active === true || c.active === true
     }));
   }, [ctxCustomers]);
 
   const dynamicProducts = useMemo(() => {
     if (!ctxProducts || ctxProducts.length === 0) return [];
     return ctxProducts.map((p: any) => ({
-      itemCode: p.Item_Code || '',
-      productName: p.Product_Name || '',
-      category: p.Category || '',
-      deptCode: p.Product_Type || '',
-      uom: p.UOM || '',
-      kgPerBag: Number(p.Kg_Per_Bag) || 0,
-      kgPerUnit: Number(p.Kg_Per_Unit) || 0,
-      storageType: p.Storage_Type || '',
-      temperature: p.Temperature || '',
-      shelfLife: p.Shelf_Life || '',
-      standardPrice: Number(p.Standard_Price) || 0,
-      active: p.Active === 'TRUE' || p.Active === true
+      itemCode: p.Item_Code || p.itemCode || '',
+      productName: p.Product_Name || p.productName || '',
+      category: p.Category || p.category || '',
+      deptCode: p.Product_Type || p.deptCode || '',
+      uom: p.UOM || p.uom || '',
+      kgPerBag: Number(p.Kg_Per_Bag ?? p.kgPerBag) || 0,
+      kgPerUnit: Number(p.Kg_Per_Unit ?? p.kgPerUnit) || 0,
+      storageType: p.Storage_Type || p.storageType || '',
+      temperature: p.Temperature || p.temperature || '',
+      shelfLife: p.Shelf_Life || p.shelfLife || '',
+      standardPrice: Number(p.Standard_Price ?? p.standardPrice) || 0,
+      active: p.Active === 'TRUE' || p.Active === true || p.active === true
     }));
   }, [ctxProducts]);
 
