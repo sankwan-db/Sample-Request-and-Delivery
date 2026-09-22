@@ -292,7 +292,11 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           setProducts(mappedProd.length ? mappedProd : UAT_DEMO_PRODUCTS);
         }
       }
-      // In UAT, keep the screen usable even when Google Sheets credentials are unavailable.\n      if (customers.length === 0) setCustomers(UAT_DEMO_CUSTOMERS);\n      if (products.length === 0) setProducts(UAT_DEMO_PRODUCTS);\n\n      if (reqRes.ok) {
+      // In UAT, keep the screen usable even when Google Sheets credentials are unavailable.
+      if (customers.length === 0) setCustomers(UAT_DEMO_CUSTOMERS);
+      if (products.length === 0) setProducts(UAT_DEMO_PRODUCTS);
+
+      if (reqRes.ok) {
         const r = await reqRes.json();
         if (r.success && r.data) {
           const mappedReqs = r.data.map((item: any) => ({
@@ -1614,7 +1618,12 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       const gate = checkReadyToDeliverGate(targetReq);
       if (!gate.isReady) {
         const blockerText = gate.blockers.join(' | ');
-        alert(`⚠️ ไม่สามารถปรับสถานะข้าม Gate "Ready to Deliver" ได้\n\nเงื่อนไขที่ยังไม่ผ่าน:\n${blockerText}\n\n(ต้องผ่านครบทั้ง RD Ready + SO Completed + Vehicle Confirmed)`);
+        alert(`⚠️ ไม่สามารถปรับสถานะข้าม Gate "Ready to Deliver" ได้
+
+เงื่อนไขที่ยังไม่ผ่าน:
+${blockerText}
+
+(ต้องผ่านครบทั้ง RD Ready + SO Completed + Vehicle Confirmed)`);
         return;
       }
     }
