@@ -72,7 +72,7 @@ export function CreateSample() {
 
   // Dynamic Master Data mapping
   const dynamicCustomers = useMemo(() => {
-    if (!ctxCustomers || ctxCustomers.length === 0) return [];
+    if (!ctxCustomers || ctxCustomers.length === 0) return [{ customerCode: 'CUS-001', customerName: 'คุณเฟิร์น', customerGroup: 'Horeca', salesChannel: 'Horeca', saleOwner: 'UAT Sale', contactName: 'คุณเฟิร์น', contactPhone: '081-000-0001', contactEmail: 'fern@example.com', shipToCode: '', deliveryAddress: 'ครัวกลาง สถานที่ส่งสินค้า เลขที่ 25 ถนนร่มเกล้า กรุงเทพฯ 10520', district: 'ลาดกระบัง', province: 'กรุงเทพมหานคร', defaultRoute: '', defaultDepot: '', defaultDeliveryTime: '', defaultDocuments: '', active: true }];
     return ctxCustomers.map((c: any) => ({
       customerCode: c.Customer_Code || c.customerCode || '',
       customerName: c.Customer_Name || c.customerName || '',
@@ -95,7 +95,7 @@ export function CreateSample() {
   }, [ctxCustomers]);
 
   const dynamicProducts = useMemo(() => {
-    if (!ctxProducts || ctxProducts.length === 0) return [];
+    if (!ctxProducts || ctxProducts.length === 0) return [{ itemCode: 'RM-001', productName: 'อกไก่สด (สินค้า UAT)', category: 'Raw Meat', deptCode: 'RM', uom: 'KG', kgPerBag: 1, kgPerUnit: 1, storageType: 'CH', temperature: 'Chilled', shelfLife: '5 วัน', standardPrice: 0, active: true }];
     return ctxProducts.map((p: any) => ({
       itemCode: p.Item_Code || p.itemCode || '',
       productName: p.Product_Name || p.productName || '',
