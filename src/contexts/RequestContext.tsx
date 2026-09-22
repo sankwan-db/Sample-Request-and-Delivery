@@ -186,8 +186,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
   const [runningNumbers, setRunningNumbers] = useState<DocumentRunningNo[]>(INITIAL_RUNNING_NUMBERS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(INITIAL_AUDIT_LOGS);
   const [voidedNumbers, setVoidedNumbers] = useState<VoidedSampleNo[]>(INITIAL_VOIDED_NUMBERS);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>(UAT_DEMO_CUSTOMERS);
+  const [products, setProducts] = useState<any[]>(UAT_DEMO_PRODUCTS);
 
   // Sync with server API on mount and on demand
   const refreshSequences = async () => {
