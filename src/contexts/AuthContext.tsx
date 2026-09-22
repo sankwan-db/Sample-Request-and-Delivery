@@ -32,6 +32,7 @@ interface AuthContextType {
   user: User | null;
   login: () => Promise<void>;
   loginWithEmailPassword: (email: string, password: string) => Promise<void>;
+  loginUat: (role: Role) => void;
   logout: () => Promise<void>;
   changeRole: (role: Role) => void;
   isAuthenticated: boolean;
@@ -179,6 +180,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginUat = (role: Role) => {
+    const uatUser: User = {
+      email: `uat-${role.toLowerCase()}@sample-flow.local`,
+      name: `UAT ${role}`,
+      role,
+      accessToken: 'uat-bypass-token',
+      allowedMenus: [],
+      isEmailPassword: true
+    };
+    if (typeof window !== 'undefined') sessionStorage.setItem('custom_user_session', JSON.stringify(uatUser));
+    setUser(uatUser);
+    setAuthError(null);
+  };
+
   const loginWithEmailPassword = async (email: string, password: string) => {
     try {
       setIsLoading(true);
@@ -247,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithEmailPassword, logout, changeRole, isAuthenticated: !!user, isLoading, authError }}>
+    <AuthContext.Provider value={{ user, login, loginWithEmailPassword, loginUat, logout, changeRole, isAuthenticated: !!user, isLoading, authError }}>
       {children}
     </AuthContext.Provider>
   );
