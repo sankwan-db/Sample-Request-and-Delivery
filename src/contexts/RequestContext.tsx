@@ -122,6 +122,18 @@ const RequestContext = createContext<RequestContextType | undefined>(undefined);
 
 // Initial demo requests representing the System-Driven Workflow stages
 const INITIAL_REQUESTS: SampleRequest[] = [];
+// UAT-only fallback data used when Google Sheets is unavailable.
+const UAT_DEMO_CUSTOMERS = [
+  { customerCode: 'CUS-001', customerName: 'คุณเฟิร์น', customerGroup: 'Horeca', salesChannel: 'Horeca', saleOwner: 'UAT Sale', contactName: 'คุณเฟิร์น', contactPhone: '081-000-0001', contactEmail: 'fern@example.com', shipToCode: '', deliveryAddress: 'ครัวกลาง สถานที่ส่งสินค้า เลขที่ 25 ถนนร่มเกล้า กรุงเทพฯ 10520', district: 'ลาดกระบัง', province: 'กรุงเทพมหานคร', defaultRoute: '', defaultDepot: '', defaultDeliveryTime: '', defaultDocuments: '', active: true },
+  { customerCode: 'CUS-002', customerName: 'ร้านอาหาร B', customerGroup: 'Horeca', salesChannel: 'Horeca', saleOwner: 'UAT Sale', contactName: 'คุณบี', contactPhone: '081-000-0002', contactEmail: 'restaurant-b@example.com', shipToCode: 'SHIP-002', deliveryAddress: 'ถนนพุทธมณฑลสาย 4 นครปฐม', district: 'สามพราน', province: 'นครปฐม', defaultRoute: '', defaultDepot: '', defaultDeliveryTime: '', defaultDocuments: '', active: true }
+];
+const UAT_DEMO_PRODUCTS = [
+  { itemCode: 'RM-001', productName: 'อกไก่สด (สินค้า UAT)', category: 'Raw Meat', deptCode: 'RM', uom: 'KG', kgPerBag: 1, kgPerUnit: 1, storageType: 'CH', temperature: 'Chilled', shelfLife: '5 วัน', standardPrice: 0, active: true },
+  { itemCode: 'RTC-001', productName: 'ไก่หมักพร้อมปรุง (สินค้า UAT)', category: 'RTC', deptCode: 'RTC', uom: 'KG', kgPerBag: 1, kgPerUnit: 1, storageType: 'CH', temperature: 'Chilled', shelfLife: '5 วัน', standardPrice: 0, active: true },
+  { itemCode: 'FUR-001', productName: 'สินค้า Further Processing (สินค้า UAT)', category: 'Further', deptCode: 'FUR', uom: 'KG', kgPerBag: 1, kgPerUnit: 1, storageType: 'FZ', temperature: 'Frozen', shelfLife: '90 วัน', standardPrice: 0, active: true },
+  { itemCode: 'GEN-RM', productName: 'ตัวอย่างสินค้าเนื้อสัตว์ (แก้ไขชื่อได้)', category: 'Generic Sample', deptCode: 'RM', uom: 'KG', kgPerBag: 1, kgPerUnit: 1, storageType: 'AMB', temperature: 'Ambient', shelfLife: '', standardPrice: 0, active: true }
+];
+
 
 const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   companyNameTh: 'ชื่อบริษัท',
@@ -257,7 +269,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             defaultDocuments: item.Default_Documents || '',
             active: item.Active === 'TRUE' || item.Active === true
           }));
-          setCustomers(mappedCust);
+          setCustomers(mappedCust.length ? mappedCust : UAT_DEMO_CUSTOMERS);
         }
       }
       if (prodRes.ok) {
@@ -277,7 +289,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             standardPrice: Number(item.Standard_Price) || 0,
             active: item.Active === 'TRUE' || item.Active === true
           }));
-          setProducts(mappedProd);
+          setProducts(mappedProd.length ? mappedProd : UAT_DEMO_PRODUCTS);
         }
       }
       if (reqRes.ok) {
