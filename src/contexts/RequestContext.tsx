@@ -292,7 +292,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           setProducts(mappedProd.length ? mappedProd : UAT_DEMO_PRODUCTS);
         }
       }
-      if (reqRes.ok) {
+      // In UAT, keep the screen usable even when Google Sheets credentials are unavailable.\n      if (customers.length === 0) setCustomers(UAT_DEMO_CUSTOMERS);\n      if (products.length === 0) setProducts(UAT_DEMO_PRODUCTS);\n\n      if (reqRes.ok) {
         const r = await reqRes.json();
         if (r.success && r.data) {
           const mappedReqs = r.data.map((item: any) => ({
