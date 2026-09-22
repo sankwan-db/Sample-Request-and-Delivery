@@ -7,13 +7,14 @@ import {
 } from 'lucide-react';
 
 export function Login() {
-  const { login, loginWithEmailPassword, isAuthenticated, isLoading, authError } = useAuth();
+  const { login, loginWithEmailPassword, loginUat, isAuthenticated, isLoading, authError } = useAuth();
   
-  const [mode, setMode] = useState<'GOOGLE' | 'EMAIL' | 'REGISTER'>('GOOGLE');
+  const [mode, setMode] = useState<'GOOGLE' | 'EMAIL' | 'REGISTER' | 'UAT'>('GOOGLE');
   
   // Custom Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [uatRole, setUatRole] = useState('SALE');
   const [loginLoading, setLoginLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -153,6 +154,13 @@ export function Login() {
                   Sign in with Google
                 </button>
 
+                <button
+                  onClick={() => { setMode('UAT'); setLocalError(null); }}
+                  className="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-sm text-xs font-bold transition-all text-center"
+                >
+                  เข้า UAT ชั่วคราว (ไม่ต้อง Login)
+                </button>
+
                 <div className="relative my-8 text-center">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200"></span></div>
                   <span className="relative bg-white px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">หรือ</span>
@@ -180,6 +188,31 @@ export function Login() {
                   <Mail size={14} />
                   <span>เฉพาะอีเมลองค์กรเท่านั้น</span>
                 </div>
+              </div>
+            )}
+
+            {/* UAT TEMPORARY ACCESS - branch only */}
+            {mode === 'UAT' && (
+              <div className="space-y-6">
+                <div className="mb-6">
+                  <button onClick={() => setMode('GOOGLE')} className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 text-xs font-semibold mb-4">
+                    <ChevronLeft size={14} /> กลับไปหน้าล็อกอิน
+                  </button>
+                  <h2 className="text-[20px] font-bold text-[var(--color-text-primary)] mb-1">เข้าสู่ UAT ชั่วคราว</h2>
+                  <p className="text-[12px] text-slate-500">ใช้สำหรับทดสอบระบบเท่านั้น ไม่ต้องใช้ Google Login</p>
+                </div>
+                <label className="block font-bold text-slate-600 mb-1.5 text-xs">เลือก Role สำหรับทดสอบ</label>
+                <select value={uatRole} onChange={(e) => setUatRole(e.target.value)} className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-sm text-sm font-semibold">
+                  <option value="SALE">Sale</option>
+                  <option value="LOGISTIC">Logistic</option>
+                  <option value="RD">RD</option>
+                  <option value="CO_SALE">Co-Sale</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="MANAGEMENT">Management</option>
+                </select>
+                <button onClick={() => loginUat(uatRole as any)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-sm text-[13px]">
+                  เข้าใช้งาน UAT
+                </button>
               </div>
             )}
 
