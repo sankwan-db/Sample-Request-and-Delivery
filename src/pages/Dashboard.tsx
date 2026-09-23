@@ -70,9 +70,9 @@ export function Dashboard() {
   }, [requests, deptFilter, saleFilter, customerFilter, statusFilter, dateRange, searchTerm]);
 
   // ROW 1 Metrics
-  const waitingApprovalRequests = filteredRequests.filter(r => r.currentStatus === RequestStatus.WAITING_APPROVAL);
-  const waitingApprovalCount = waitingApprovalRequests.length;
-  const waitingApprovalValue = waitingApprovalRequests.reduce((s, r) => s + (r.totalValue || 0), 0);
+  const processingRequests = filteredRequests.filter(r => r.currentStatus === RequestStatus.PROCESSING);
+  const processingCount = processingRequests.length;
+  const processingValue = processingRequests.reduce((s, r) => s + (r.totalValue || 0), 0);
 
   const readyToDeliverRequests = filteredRequests.filter(r => r.currentStatus === RequestStatus.READY_TO_DELIVER);
   const readyToDeliverCount = readyToDeliverRequests.length;
@@ -111,10 +111,8 @@ export function Dashboard() {
   }, [filteredRequests]);
 
   // ROW 2 Process Summary
-  const approvalActive = filteredRequests.filter(r => r.currentStatus === RequestStatus.WAITING_APPROVAL).length;
-  const rdActive = filteredRequests.filter(r => r.rdStatus === 'IN_PROGRESS' || r.currentStatus === RequestStatus.PROCESSING).length;
+    const rdActive = filteredRequests.filter(r => r.rdStatus === 'IN_PROGRESS' || r.currentStatus === RequestStatus.PROCESSING).length;
   const coSaleActive = filteredRequests.filter(r => r.coSaleStatus === 'IN_PROGRESS' && !r.coSaleTask?.soNumber).length;
-  const logisticActive = filteredRequests.filter(r => r.logisticStatus === 'IN_PROGRESS' && !r.logisticTask?.vehicleNo).length;
   const deliveryActive = filteredRequests.filter(r => [RequestStatus.READY_TO_DELIVER, RequestStatus.PICKED_UP, RequestStatus.OUT_FOR_DELIVERY, RequestStatus.ARRIVED].includes(r.currentStatus)).length;
 
   // ROW 3: Delivery Today
@@ -125,12 +123,12 @@ export function Dashboard() {
   const myPendingTasks = useMemo(() => {
     const tasks = [];
     filteredRequests.forEach(req => {
-      if (req.currentStatus === RequestStatus.WAITING_APPROVAL) {
-        tasks.push({ id: req.sampleNo, title: `อนุมัติคำขอ ${req.sampleNo}`, dept: 'Approval', deadline: req.deliveryDate, priority: req.priority, link: `/sample/${req.sampleNo}` });
-      } else if (!req.coSaleTask?.soNumber && req.coSaleStatus !== 'COMPLETED') {
+      if (req.currentStatus !== RequestStatus.PROCESSING) return;
+      if (req.rdStatus !== 'COMPLETED') {
+        tasks.push({ id: req.sampleNo, title: `เตรียมสินค้าสำหรับ ${req.sampleNo}`, dept: 'RD', deadline: req.deliveryDate, priority: req.priority, link: `/sample/${req.sampleNo}` });
+      }
+      if (req.coSaleStatus !== 'COMPLETED') {
         tasks.push({ id: req.sampleNo, title: `ออก SO สำหรับ ${req.sampleNo}`, dept: 'Co-Sale', deadline: req.deliveryDate, priority: req.priority, link: '/co-sale' });
-      } else if (!req.logisticTask?.vehicleNo && req.logisticStatus !== 'COMPLETED') {
-        tasks.push({ id: req.sampleNo, title: `มอบหมายรถ ${req.sampleNo}`, dept: 'Logistic', deadline: req.deliveryDate, priority: req.priority, link: '/logistic' });
       }
     });
     return tasks.slice(0, 5);
@@ -245,8 +243,8 @@ export function Dashboard() {
               className="bg-slate-50 border border-slate-200 rounded py-1 px-2 text-[11px] font-medium"
             >
               <option value="ALL">สถานะ: ทั้งหมด</option>
-              <option value="WAITING_APPROVAL">WAITING_APPROVAL</option>
-              <option value="APPROVED">APPROVED</option>
+              <option value="DRAFT">DRAFT</option>
+              <option value="PROCESSING">PROCESSING</option>
               <option value="READY_TO_DELIVER">READY_TO_DELIVER</option>
               <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
               <option value="COMPLETED">COMPLETED</option>
@@ -326,7 +324,7 @@ export function Dashboard() {
 
         {/* Right: 3 Metric Cards (5 cols) */}
         <div className="lg:col-span-5 grid grid-cols-1 gap-3.5">
-          {/* Metric 1: Waiting Approval */}
+          {/* Metric 1: In preparation */}
           <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm flex items-center justify-between hover:border-amber-300 transition-colors">
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
@@ -334,14 +332,14 @@ export function Dashboard() {
               </div>
               <div>
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Waiting Approval (รออนุมัติ)
+                  In Preparation (กำลังเตรียมสินค้า)
                 </span>
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-[22px] font-black text-slate-900 font-mono">
-                    {waitingApprovalCount}
+                    {processingCount}
                   </span>
                   <span className="text-[11px] text-slate-500 font-mono font-medium">
-                    (฿{waitingApprovalValue.toLocaleString()})
+                    (฿{processingValue.toLocaleString()})
                   </span>
                 </div>
               </div>
@@ -413,7 +411,7 @@ export function Dashboard() {
       </div>
 
       {/* ============================================================ */}
-      {/* ROW 2: Process Summary (5 Nodes: Approval, RD, Co Sale, Logistic, Delivery) */}
+      {/* ROW 2: Process Summary (RD, Co-Sale, Delivery) */}
       {/* ============================================================ */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
         <div className="flex justify-between items-center mb-4">
@@ -428,23 +426,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Node 1: Approval */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Node 1: RD Task */}
           <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all">
             <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-700 uppercase">1. Approval</span>
-              <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {approvalActive} Active
-              </span>
-            </div>
-            <div className="text-[20px] font-black text-slate-900 font-mono">{approvalActive}</div>
-            <p className="text-[10px] text-slate-500 mt-1">รอ ผจก. ฝ่ายขาย/RD พิจารณา</p>
-          </div>
-
-          {/* Node 2: RD Task */}
-          <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-700 uppercase">2. RD Task</span>
+              <span className="text-[11px] font-bold text-slate-700 uppercase">1. RD Task</span>
               <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {rdActive} Active
               </span>
@@ -453,10 +439,10 @@ export function Dashboard() {
             <p className="text-[10px] text-slate-500 mt-1">เตรียมสินค้า & ตัด Lot</p>
           </div>
 
-          {/* Node 3: Co Sale */}
+          {/* Node 2: Co Sale */}
           <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all">
             <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-700 uppercase">3. Co-Sale</span>
+              <span className="text-[11px] font-bold text-slate-700 uppercase">2. Co-Sale</span>
               <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {coSaleActive} Active
               </span>
@@ -465,22 +451,10 @@ export function Dashboard() {
             <p className="text-[10px] text-slate-500 mt-1">ออก Sales Order ใน ERP</p>
           </div>
 
-          {/* Node 4: Logistic Assignment */}
+          {/* Node 3: Delivery */}
           <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all">
             <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-700 uppercase">4. Logistic</span>
-              <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {logisticActive} Active
-              </span>
-            </div>
-            <div className="text-[20px] font-black text-slate-900 font-mono">{logisticActive}</div>
-            <p className="text-[10px] text-slate-500 mt-1">มอบหมายรถ & สายส่ง</p>
-          </div>
-
-          {/* Node 5: Delivery */}
-          <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-700 uppercase">5. Delivery</span>
+              <span className="text-[11px] font-bold text-slate-700 uppercase">3. Delivery</span>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {deliveryActive} Active
               </span>
@@ -522,7 +496,7 @@ export function Dashboard() {
                     </div>
                     <div className="font-semibold text-slate-800 truncate mt-0.5">{req.customerName}</div>
                     <div className="text-[10px] text-slate-500 flex justify-between mt-1">
-                      <span>{req.logisticTask?.vehicleNo || 'ยังไม่มอบหมายรถ'}</span>
+                      <span>{req.deliveryAddress || req.province || 'รอข้อมูลสถานที่จัดส่ง'}</span>
                       <span className="font-bold text-emerald-700">{req.currentStatus}</span>
                     </div>
                   </div>
