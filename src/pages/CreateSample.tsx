@@ -248,6 +248,7 @@ export function CreateSample() {
     }
     const prod = currentProductList.find(p => p.itemCode === itemCode);
     if (!prod) return;
+    const isGeneric = /^GEN-/i.test(prod.itemCode);
 
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
@@ -260,7 +261,7 @@ export function CreateSample() {
         return {
           ...line,
           itemCode: prod.itemCode,
-          productName: prod.productName,
+          productName: isGeneric ? '' : prod.productName,
           category: prod.category,
           storageType: prod.storageType,
           kgPerBag,
@@ -495,6 +496,7 @@ export function CreateSample() {
     if (lines.length === 0) productErrors.push('ต้องมีรายการสินค้าอย่างน้อย 1 รายการ');
     lines.forEach((l, idx) => {
       if (!l.itemCode) productErrors.push(`รายการที่ ${idx + 1}: กรุณาเลือกสินค้า`);
+      if (!l.productName.trim()) productErrors.push(`รายการที่ ${idx + 1}: กรุณาระบุชื่อสินค้าตัวอย่าง`);
       if (!l.requestQty || l.requestQty <= 0) productErrors.push(`รายการที่ ${idx + 1}: จำนวนน้ำหนักรวม (KG) ต้องมากกว่า 0`);
       if (l.price === undefined || l.price < 0) productErrors.push(`รายการที่ ${idx + 1}: ราคาต่อหน่วยต้องไม่ติดลบ`);
     });
@@ -1303,6 +1305,16 @@ export function CreateSample() {
                         </>
                       )}
                     </div>
+                    {/^GEN-/i.test(line.itemCode) && (
+                      <input
+                        type="text"
+                        value={line.productName}
+                        onChange={e => handleLineFieldChange(line.id, 'productName', e.target.value)}
+                        placeholder="พิมพ์ชื่อสินค้าตัวอย่างจริง"
+                        aria-label="ชื่อสินค้าตัวอย่างที่แก้ไขได้"
+                        className="mt-1.5 w-full bg-white border border-blue-300 rounded py-1 px-2 text-[12px] font-semibold text-slate-900 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      />
+                    )}
                   </td>
 
                   {/* Type */}
