@@ -337,12 +337,16 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             currentProcess: item.Current_Process || '',
             currentOwner: item.Current_Owner || '',
             lines: Array.isArray(item.lines) ? item.lines.map((l: any) => ({
-              id: l.Line_ID || Math.random(),
-              itemCode: l.Item_Code || '',
-              productName: l.Product_Name || '',
-              requestQty: Number(l.Request_Qty) || 0,
-              uom: l.UOM || '',
-              lineValue: Number(l.Line_Value) || 0
+              id: l.Line_ID || l.id || Math.random(),
+              itemCode: l.Item_Code ?? l.itemCode ?? '',
+              productName: l.Product_Name ?? l.productName ?? '',
+              category: l.Category ?? l.category ?? '',
+              storageType: l.Storage_Type ?? l.storageType ?? '',
+              requestQty: Number(l.Request_Qty ?? l.requestQty ?? 0),
+              uom: l.UOM ?? l.uom ?? '',
+              price: Number(l.Unit_Price ?? l.price ?? 0),
+              lineValue: Number(l.Line_Value ?? l.lineValue ?? l.value ?? 0),
+              remark: l.Remark ?? l.remark ?? ''
             })) : [],
             rdStatus: item.RD_Status || 'PENDING',
             coSaleStatus: item.CoSale_Status || 'PENDING',
