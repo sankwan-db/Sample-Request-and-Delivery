@@ -761,9 +761,9 @@ export function CreateSample() {
             Sale Create
           </span>
           <ChevronRight size={14} className="text-slate-400" />
-          <span className="text-slate-500">2. Logistic Pre-check</span>
+          <span className="text-slate-500">2. RD + Co-Sale</span>
           <ChevronRight size={14} className="text-slate-400" />
-          <span className="text-slate-500">3. SM Approve</span>
+          <span className="text-slate-500">3. Logistic Plan</span>
           <ChevronRight size={14} className="text-slate-400" />
           <span className="text-slate-500">4. Dispatch</span>
         </div>
@@ -1651,7 +1651,7 @@ export function CreateSample() {
                 ข้อมูลการจัดส่ง (Delivery Section)
               </h3>
               <p className="text-[11px] text-slate-500">
-                ข้อมูลเงื่อนไขขนส่งสำหรับ Logistic Pre-check และจัดสรรสายรถ
+                ข้อมูลเงื่อนไขขนส่งสำหรับ Logistic จัดสรรสายรถ
               </p>
             </div>
           </div>
