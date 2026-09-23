@@ -1260,7 +1260,7 @@ export function CreateSample() {
                       </div>
 
                       {activeSearchLineId === line.id && createPortal(
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-6" onKeyDown={e => { if (e.key === 'Escape') setActiveSearchLineId(null); }}>
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-6" onClick={e => e.stopPropagation()} onKeyDown={e => { if (e.key === 'Escape') setActiveSearchLineId(null); }}>
                           <div className="w-full max-w-4xl max-h-[90dvh] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label="เลือกสินค้าตัวอย่าง">
                             <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
                               <div>
