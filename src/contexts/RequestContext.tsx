@@ -350,6 +350,14 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
             })) : [],
             rdStatus: item.RD_Status || 'PENDING',
             coSaleStatus: item.CoSale_Status || 'PENDING',
+            coSaleTask: item.CoSale_SO_Number ? {
+              taskId: `COS-${item.Sample_No}`, sampleNo: item.Sample_No,
+              assignedTo: 'Co-Sale Specialist', assignedEmail: 'cosale@example.com',
+              customerCode: item.Customer_Code || '', shipTo: item.Customer_Code || '',
+              sampleType: item.Sample_Type || '', taskCreateTime: item.Created_Timestamp || '',
+              soNumber: item.CoSale_SO_Number, soDate: item.CoSale_SO_Date || '',
+              taskStatus: 'COMPLETED', slaStatus: 'NORMAL'
+            } : undefined,
             logisticStatus: item.Logistic_Status || 'PENDING',
             createdTimestamp: item.Created_Timestamp || '',
             updatedTimestamp: item.Updated_Timestamp || '',
@@ -555,7 +563,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       return {
         isReady: false,
         blockers: ['ไม่พบคำขอตัวอย่างในระบบ'],
-        criteria: { rdReady: false, soCompleted: false, vehicleConfirmed: false }
+        criteria: { rdReady: false, soCompleted: false }
       };
     }
     return checkReadyToDeliverGate(req);
@@ -617,7 +625,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     setRecentEmails(prev => [entry, ...prev.slice(0, 4)]);
   };
 
-  // 1. Sale Submits Request -> System Validates -> Routes to LOGISTIC PRE-CHECK
+  // UAT: Sale submits directly to RD and Co-Sale; delivery follows their completion.
   const createRequest = async (payload: CreateSamplePayload): Promise<SampleRequest> => {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
@@ -636,9 +644,9 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const totalQty = payload.lines.reduce((sum, l) => sum + (Number(l.requestQty) || 0), 0);
     const totalValue = payload.lines.reduce((sum, l) => sum + ((Number(l.requestQty) || 0) * (Number(l.price) || 0)), 0);
 
-    const initialStatus = payload.isDraft ? RequestStatus.DRAFT : RequestStatus.LOGISTIC_PRE_CHECK;
-    const initialProcess = payload.isDraft ? 'DRAFT_SAVED' : 'LOGISTIC_PRECHECK';
-    const initialOwner = payload.isDraft ? `${user?.name || 'Sale'} (Owner)` : 'Logistic Team (Pre-check)';
+    const initialStatus = payload.isDraft ? RequestStatus.DRAFT : RequestStatus.PROCESSING;
+    const initialProcess = payload.isDraft ? 'DRAFT_SAVED' : 'RD_COSALE_EXECUTION';
+    const initialOwner = payload.isDraft ? `${user?.name || 'Sale'} (Owner)` : 'RD & Co-Sale';
 
     const deptObj = rdDepartments.find(d => d.RD_Department_Code.toUpperCase() === payload.department.toUpperCase());
 
@@ -687,8 +695,8 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       currentProcess: initialProcess,
       currentOwner: initialOwner,
       slaStatus: 'NORMAL',
-      rdStatus: 'PENDING',
-      coSaleStatus: 'PENDING',
+      rdStatus: payload.isDraft ? 'PENDING' : 'IN_PROGRESS',
+      coSaleStatus: payload.isDraft ? 'PENDING' : 'IN_PROGRESS',
       logisticStatus: 'PENDING',
       lines: payload.lines.map((line, idx) => ({
         ...line,
@@ -698,30 +706,27 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
       updatedTimestamp: now.toISOString()
     };
 
-    // If submitted, notify Logistic
+    // Create the two UAT work items when the request is submitted.
     if (!payload.isDraft) {
-      const emailLog: EmailLogEntry = {
-        emailLogId: `EML-${Date.now()}`,
-        sampleNo: finalSampleNo,
-        eventCode: 'SUBMITTED_FOR_PRECHECK',
-        sendDate: dateStr,
-        sendTime: timeStr,
-        toEmail: 'logistic.precheck@example.com',
-        ccEmail: newRequest.saleEmail,
-        subject: `[LOGISTIC PRE-CHECK] New Request ${finalSampleNo} - ${payload.customerName}`,
-        templateCode: 'TMPL_LOGISTIC_PRECHECK',
-        sendStatus: 'SENT',
-        body: `คำขอใหม่ ${finalSampleNo} (${finalRevision}) จัดส่ง ${payload.deliveryDate} (${payload.deliveryTimeFrom}-${payload.deliveryTimeTo}) เส้นทาง ${payload.route} รอ Logistic ตรวจสอบความเป็นไปได้`
+      newRequest.rdTasks = newRequest.lines.map((line, idx) => ({
+        taskId: `RD-${Date.now()}-${idx}`, sampleNo: finalSampleNo,
+        assignedTo: `${payload.department} Specialist`, assignedEmail: 'rd@example.com',
+        taskCreateTime: `${dateStr} ${timeStr}`, requiredDate: payload.preparationDate || payload.deliveryDate,
+        itemCode: line.itemCode, productName: line.productName, requiredQty: line.requestQty,
+        taskStatus: 'PENDING', slaStatus: 'NORMAL'
+      }));
+      newRequest.coSaleTask = {
+        taskId: `COS-${Date.now()}`, sampleNo: finalSampleNo,
+        assignedTo: 'Co-Sale Specialist', assignedEmail: 'cosale@example.com',
+        customerCode: payload.customerCode, shipTo: payload.shipToCode || payload.customerCode,
+        sampleType: payload.sampleType, taskCreateTime: `${dateStr} ${timeStr}`,
+        erpStatus: 'NOT_CREATED', documentStatus: 'PENDING', taskStatus: 'PENDING', slaStatus: 'NORMAL'
       };
-      newRequest.emailLogs = [emailLog];
-      triggerEmailNotification(emailLog);
     }
 
-    setRequests(prev => [newRequest, ...prev]);
-
     // Central Google Sheets Service Layer Sync (Part 2 — Service Layer กลาง)
-    sheetService.createSampleRequest(newRequest)
-      .catch(err => console.warn('Central Sheet Service sync notification:', err.message));
+    await sheetService.createSampleRequest(newRequest);
+    setRequests(prev => [newRequest, ...prev]);
 
 
     return newRequest;
@@ -1209,12 +1214,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
   ): { status: RequestStatus; process: string; owner: string; gatePassed: boolean } => {
     const isRdDone = newRdStatus === 'COMPLETED';
     const isSoDone = newCoSaleStatus === 'COMPLETED';
-    const hasVehicle = vehicleAssigned !== undefined 
-      ? vehicleAssigned 
-      : Boolean(req.logisticTask?.vehicleNo && req.logisticTask?.driverName);
-    const isLogDone = newLogisticStatus === 'COMPLETED' && hasVehicle;
-
-    if (isRdDone && isSoDone && isLogDone) {
+    if (isRdDone && isSoDone) {
       return {
         status: RequestStatus.READY_TO_DELIVER,
         process: 'READY_TO_DELIVER_GATE_PASSED',
@@ -1225,7 +1225,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     return {
       status: RequestStatus.PROCESSING,
       process: 'PARALLEL_TASKS_EXECUTION',
-      owner: 'RD, Co-Sale & Logistic Teams',
+      owner: 'RD & Co-Sale',
       gatePassed: false
     };
   };
@@ -1258,10 +1258,10 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           sendTime: now.toTimeString().substring(0, 5),
           toEmail: 'logistic.dispatcher@example.com',
           ccEmail: `${req.saleEmail}, cosale@example.com`,
-          subject: `[READY TO DELIVER] ${req.sampleNo} ผ่าน Gate ครบ 3 เงื่อนไขแล้ว พร้อมจ่ายของ`,
+          subject: `[READY TO DELIVER] ${req.sampleNo} RD และ Co-Sale ดำเนินการครบแล้ว`,
           templateCode: 'TMPL_READY_DELIVER',
           sendStatus: 'SENT',
-          body: `คำขอ ${req.sampleNo} ผ่าน Gate เรียบร้อย: 1) RD เตรียมสินค้าเสร็จ 2) Co-Sale ออก SO แล้ว 3) Logistic จัดรถ/คนขับเรียบร้อย สามารถกระจายสินค้าได้`
+          body: `คำขอ ${req.sampleNo} พร้อมจัดส่ง: RD เตรียมสินค้าเสร็จและ Co-Sale ออก SO แล้ว`
         };
         triggerEmailNotification(emailLog);
       }
@@ -1276,6 +1276,15 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         updatedTimestamp: now.toISOString()
       };
     }));
+    const target = requests.find(req => req.sampleNo === sampleNo);
+    if (target) {
+      const gate = checkGateStatusForReq(target, 'COMPLETED', target.coSaleStatus, target.logisticStatus);
+      sheetService.updateSampleRequest(sampleNo, {
+        RD_Status: 'COMPLETED', Current_Status: gate.status,
+        Current_Process: gate.process, Current_Owner: gate.owner,
+        RD_Lot: data.lot, RD_Expiry: data.expiryDate
+      }).catch(err => console.warn('RD completion sync failed:', err));
+    }
   };
 
   // 5. Co-Sale Completes SO Creation
@@ -1316,10 +1325,10 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
           sendTime: now.toTimeString().substring(0, 5),
           toEmail: 'logistic.dispatcher@example.com',
           ccEmail: `${req.saleEmail}, cosale@example.com`,
-          subject: `[READY TO DELIVER] ${req.sampleNo} ผ่าน Gate ครบ 3 เงื่อนไขแล้ว พร้อมจ่ายของ`,
+          subject: `[READY TO DELIVER] ${req.sampleNo} RD และ Co-Sale ดำเนินการครบแล้ว`,
           templateCode: 'TMPL_READY_DELIVER',
           sendStatus: 'SENT',
-          body: `คำขอ ${req.sampleNo} ผ่าน Gate เรียบร้อย: 1) RD เตรียมสินค้าเสร็จ 2) Co-Sale ออก SO แล้ว (${data.soNumber}) 3) Logistic จัดรถ/คนขับเรียบร้อย สามารถกระจายสินค้าได้`
+          body: `คำขอ ${req.sampleNo} พร้อมจัดส่ง: RD เตรียมสินค้าเสร็จและ Co-Sale ออก SO แล้ว (${data.soNumber})`
         };
         triggerEmailNotification(emailLog);
       }
@@ -1334,6 +1343,15 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
         updatedTimestamp: now.toISOString()
       };
     }));
+    const target = requests.find(req => req.sampleNo === sampleNo);
+    if (target) {
+      const gate = checkGateStatusForReq(target, target.rdStatus, 'COMPLETED', target.logisticStatus);
+      sheetService.updateSampleRequest(sampleNo, {
+        CoSale_Status: 'COMPLETED', Current_Status: gate.status,
+        Current_Process: gate.process, Current_Owner: gate.owner,
+        CoSale_SO_Number: data.soNumber, CoSale_SO_Date: data.soDate
+      }).catch(err => console.warn('Co-Sale completion sync failed:', err));
+    }
   };
 
   // 6. Logistic Confirms Vehicle & Driver
@@ -1627,7 +1645,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
 เงื่อนไขที่ยังไม่ผ่าน:
 ${blockerText}
 
-(ต้องผ่านครบทั้ง RD Ready + SO Completed + Vehicle Confirmed)`);
+(ต้องผ่านครบทั้ง RD Ready + SO Completed)`);
         return;
       }
     }

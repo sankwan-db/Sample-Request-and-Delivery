@@ -618,6 +618,28 @@ export async function appendRows(accessToken: string, spreadsheetId: string, she
   });
 }
 
+// Keep older UAT spreadsheets compatible when workflow fields are introduced.
+// Return the actual column order so new rows never shift under existing headers.
+export async function ensureSheetColumns(
+  accessToken: string, spreadsheetId: string, sheetName: string, required: readonly string[]
+): Promise<string[]> {
+  const sheets = await getSheetsClient(accessToken);
+  const actualSheet = resolveSheetName(sheetName);
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${actualSheet}'!1:1` });
+  const headers = (response.data.values?.[0] || []) as string[];
+  if (!headers.length) throw new Error(`Sheet ${actualSheet} has no header row`);
+  const missing = required.filter(col => !headers.includes(col));
+  if (!missing.length) return headers;
+  const updated = [...headers, ...missing];
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${actualSheet}'!A1:${columnIndexToLetter(updated.length - 1)}1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [updated] }
+  });
+  return updated;
+}
+
 export async function updateRowByColumn(
   accessToken: string, 
   spreadsheetId: string, 
@@ -782,4 +804,3 @@ export async function uploadFileToDrive(
     webContentLink: file.data.webContentLink || ''
   };
 }
-

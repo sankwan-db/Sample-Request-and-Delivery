@@ -6,6 +6,14 @@ import path from 'path';
 
 export const serviceRouter = Router();
 
+// Legacy UAT transitions must not move requests back to removed stages.
+serviceRouter.use([
+  '/confirmLogisticPrecheck', '/assignVehicle', '/confirmVehicle',
+  '/approveRequest', '/rejectRequest', '/requestRevision'
+], (_req: Request, res: Response) => {
+  res.status(410).json({ success: false, error: 'This step is no longer part of the UAT workflow' });
+});
+
 // Helper to extract access token and spreadsheet ID
 function getAuthContext(req: Request) {
   let token = req.body?.token;

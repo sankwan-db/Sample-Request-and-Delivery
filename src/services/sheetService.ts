@@ -380,7 +380,7 @@ export async function completeSO(
 
 export async function checkReadyToDeliverGate(sampleNo: string): Promise<{
   isReady: boolean;
-  criteria: { rdCompleted: boolean; soCompleted: boolean; vehicleConfirmed: boolean };
+  criteria: { rdCompleted: boolean; soCompleted: boolean };
 }> {
   const res = await fetch(`/api/services/checkReadyToDeliverGate/${encodeURIComponent(sampleNo)}`, {
     headers: getAuthHeader()

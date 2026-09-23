@@ -645,11 +645,7 @@ export function CreateSample() {
   };
 
   // ==========================================
-  // SUBMIT WORKFLOW (PART 59)
-  // 1. Validate Mandatory Data
-  // 2. Create Logistic Precheck Task
-  // 3. Status: WAITING_LOGISTIC_CHECK
-  // 4. Send Auto Email
+  // Submit directly to RD and Co-Sale after validation.
   // ==========================================
   const handleSubmit = async () => {
     const { isValid } = runValidation();
@@ -719,15 +715,6 @@ export function CreateSample() {
         isDraft: false
       });
 
-      // Send workflow email via service
-      await sheetService.sendWorkflowEmail('SUBMITTED_FOR_PRECHECK', created.sampleNo, {
-        customerName: created.customerName,
-        deliveryDate: created.deliveryDate,
-        deliveryTime: `${created.deliveryTimeFrom} - ${created.deliveryTimeTo}`,
-        route: created.route,
-        totalWeight: totalWeightKg
-      }).catch(e => console.warn('Workflow email notice:', e.message));
-
       navigate(`/sample/${created.id}`);
     } catch (err: any) {
       console.error(err);
@@ -767,9 +754,7 @@ export function CreateSample() {
           <ChevronRight size={14} className="text-slate-400" />
           <span className="text-slate-500">2. RD + Co-Sale</span>
           <ChevronRight size={14} className="text-slate-400" />
-          <span className="text-slate-500">3. Logistic Plan</span>
-          <ChevronRight size={14} className="text-slate-400" />
-          <span className="text-slate-500">4. Dispatch</span>
+          <span className="text-slate-500">3. Delivery</span>
         </div>
       </div>
 
@@ -1133,7 +1118,7 @@ export function CreateSample() {
               >
                 <option value="NORMAL">NORMAL (ปกติ - ตามรอบจัดส่ง)</option>
                 <option value="HIGH">HIGH (ด่วน - ส่งผลต่อยอดขาย)</option>
-                <option value="URGENT">URGENT (ด่วนที่สุด - อนุมัติพิเศษ)</option>
+                <option value="URGENT">URGENT (ด่วนที่สุด)</option>
               </select>
             </div>
 
@@ -1648,7 +1633,7 @@ export function CreateSample() {
                 ข้อมูลการจัดส่ง (Delivery Section)
               </h3>
               <p className="text-[11px] text-slate-500">
-                ข้อมูลเงื่อนไขขนส่งสำหรับ Logistic จัดสรรสายรถ
+                ระบุวัน เวลา สถานที่ และอุณหภูมิสำหรับการจัดส่ง
               </p>
             </div>
           </div>
@@ -1688,32 +1673,6 @@ export function CreateSample() {
                   value={deliveryTimeTo}
                   onChange={e => setDeliveryTimeTo(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded py-1.5 px-2.5 text-xs font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Depot (คลังต้นทาง)
-                </label>
-                <input 
-                  type="text" 
-                  disabled
-                  value="-- ฝ่ายโลจิสติกส์เป็นผู้กำหนด (Assigned by Logistics) --"
-                  className="w-full bg-slate-100 border border-slate-200 text-slate-500 rounded py-1.5 px-2.5 text-[11px] font-medium cursor-not-allowed focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Route (สายการเดินรถ)
-                </label>
-                <input 
-                  type="text" 
-                  disabled
-                  value="-- ฝ่ายโลจิสติกส์เป็นผู้กำหนด (Assigned by Logistics) --"
-                  className="w-full bg-slate-100 border border-slate-200 text-slate-500 rounded py-1.5 px-2.5 text-[11px] font-medium cursor-not-allowed focus:outline-none"
                 />
               </div>
             </div>

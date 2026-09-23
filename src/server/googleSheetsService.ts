@@ -3,6 +3,7 @@ import {
   appendRow, 
   appendRows, 
   updateRowByColumn, 
+  ensureSheetColumns,
   setupGoogleSheetsDatabase, 
   uploadFileToDrive,
   findExistingSpreadsheet,
@@ -358,10 +359,32 @@ export async function getSampleRequests(filters?: any, token?: string, spreadshe
   return requests.map(req => {
     const sampleNo = req.Sample_No || req.sampleNo;
     const reqLines = lines.filter(l => (l.Sample_No || l.sampleNo) === sampleNo);
-    return {
+    const recent = memoryStore.requests.get(sampleNo);
+    const legacyStatus = recent?.Current_Status ?? req.Current_Status;
+    const bypassed = ['LOGISTIC PRE-CHECK', 'WAITING APPROVAL', 'APPROVED'].includes(legacyStatus);
+    const resolved = {
       ...req,
+      ...(recent ? {
+        Current_Status: recent.Current_Status ?? req.Current_Status,
+        Current_Process: recent.Current_Process ?? req.Current_Process,
+        Current_Owner: recent.Current_Owner ?? req.Current_Owner,
+        RD_Status: recent.RD_Status ?? req.RD_Status,
+        CoSale_Status: recent.CoSale_Status ?? req.CoSale_Status,
+        CoSale_SO_Number: recent.CoSale_SO_Number ?? req.CoSale_SO_Number,
+        CoSale_SO_Date: recent.CoSale_SO_Date ?? req.CoSale_SO_Date,
+        RD_Lot: recent.RD_Lot ?? req.RD_Lot,
+        RD_Expiry: recent.RD_Expiry ?? req.RD_Expiry
+      } : {}),
+      ...(bypassed ? {
+        Current_Status: 'PROCESSING', Current_Process: 'RD_COSALE_EXECUTION',
+        Current_Owner: 'RD & Co-Sale',
+        RD_Status: recent?.RD_Status || req.RD_Status || 'IN_PROGRESS',
+        CoSale_Status: recent?.CoSale_Status || req.CoSale_Status || 'IN_PROGRESS'
+      } : {}),
       lines: reqLines.length > 0 ? reqLines : (memoryStore.lines.get(sampleNo) || [])
     };
+    if (!recent) memoryStore.requests.set(sampleNo, resolved);
+    return resolved;
   });
 }
 
@@ -434,9 +457,11 @@ export async function createSampleRequest(requestData: any, token?: string, spre
     Total_Qty: requestData.totalQty || (requestData.lines?.reduce((sum: number, l: any) => sum + (Number(l.requestQty) || 0), 0)) || 0,
     Total_Weight: requestData.totalWeight || 0,
     Grand_Total: requestData.totalValue || 0,
-    Current_Status: requestData.isDraft ? 'DRAFT' : 'LOGISTIC PRE-CHECK',
-    Current_Process: requestData.isDraft ? 'DRAFT_SAVED' : 'LOGISTIC_PRECHECK',
-    Current_Owner: requestData.isDraft ? requestData.saleName : 'Somchai (Logistic Dispatcher)',
+    Current_Status: requestData.isDraft ? 'DRAFT' : 'PROCESSING',
+    Current_Process: requestData.isDraft ? 'DRAFT_SAVED' : 'RD_COSALE_EXECUTION',
+    Current_Owner: requestData.isDraft ? requestData.saleName : 'RD & Co-Sale',
+    RD_Status: requestData.isDraft ? 'PENDING' : 'IN_PROGRESS',
+    CoSale_Status: requestData.isDraft ? 'PENDING' : 'IN_PROGRESS',
     SLA_Status: 'NORMAL',
     Document_Status: 'DRAFT',
     Updated_Timestamp: now.toISOString()
@@ -449,7 +474,7 @@ export async function createSampleRequest(requestData: any, token?: string, spre
   const sId = getActiveSpreadsheetId(spreadsheetId);
   if (token && sId) {
     try {
-      const headerSchema = SHEETS_SCHEMA['10_SAMPLE_REQUEST_HEADER'];
+      const headerSchema = await ensureSheetColumns(token, sId, '10_SAMPLE_REQUEST_HEADER', SHEETS_SCHEMA['10_SAMPLE_REQUEST_HEADER']);
       const headerRow = headerSchema.map((col: string) => (headerRowData as any)[col] !== undefined ? String((headerRowData as any)[col]) : '');
       await appendRow(token, sId, '10_SAMPLE_REQUEST_HEADER', headerRow);
 
@@ -480,9 +505,6 @@ export async function createSampleRequest(requestData: any, token?: string, spre
     }
   }
 
-  // Create corresponding logistic task
-  await getLogisticTasks(sampleNo, token, spreadsheetId);
-
   await writeAuditLog({
     sampleNo,
     user: requestData.saleName || 'Sale',
@@ -498,14 +520,31 @@ export async function createSampleRequest(requestData: any, token?: string, spre
 }
 
 export async function updateSampleRequest(sampleNo: string, updateData: any, token?: string, spreadsheetId?: string) {
-  const existing = memoryStore.requests.get(sampleNo) || {};
+  if (['LOGISTIC PRE-CHECK', 'WAITING APPROVAL', 'APPROVED'].includes(updateData?.Current_Status)) {
+    throw new Error('This step is no longer part of the UAT workflow');
+  }
+  const existing = memoryStore.requests.get(sampleNo) || await getSampleRequestById(sampleNo, token, spreadsheetId) || {};
   const merged = { ...existing, ...updateData, Updated_Timestamp: new Date().toISOString() };
+  const normalizedUpdate = { ...updateData };
+  if (['PROCESSING', 'READY TO DELIVER'].includes(merged.Current_Status) &&
+      (updateData.RD_Status || updateData.CoSale_Status)) {
+    const ready = merged.RD_Status === 'COMPLETED' && merged.CoSale_Status === 'COMPLETED';
+    merged.Current_Status = ready ? 'READY TO DELIVER' : 'PROCESSING';
+    merged.Current_Process = ready ? 'READY_TO_DELIVER_GATE_PASSED' : 'RD_COSALE_EXECUTION';
+    merged.Current_Owner = ready ? 'Delivery Team' : 'RD & Co-Sale';
+    Object.assign(normalizedUpdate, {
+      Current_Status: merged.Current_Status,
+      Current_Process: merged.Current_Process,
+      Current_Owner: merged.Current_Owner
+    });
+  }
   memoryStore.requests.set(sampleNo, merged);
 
   const sId = getActiveSpreadsheetId(spreadsheetId);
   if (token && sId) {
     try {
-      await updateRowByColumn(token, sId, '10_SAMPLE_REQUEST_HEADER', 'Sample_No', sampleNo, updateData);
+      await ensureSheetColumns(token, sId, '10_SAMPLE_REQUEST_HEADER', SHEETS_SCHEMA['10_SAMPLE_REQUEST_HEADER']);
+      await updateRowByColumn(token, sId, '10_SAMPLE_REQUEST_HEADER', 'Sample_No', sampleNo, normalizedUpdate);
     } catch (e: any) {
       console.warn('Sheets updateSampleRequest error:', e.message);
     }
@@ -518,18 +557,15 @@ export async function submitSampleRequest(sampleNo: string, submitter: any, toke
   const result = await updateSampleRequest(
     sampleNo,
     {
-      Current_Status: 'LOGISTIC PRE-CHECK',
-      Current_Process: 'LOGISTIC_PRECHECK',
-      Current_Owner: 'Somchai (Logistic Dispatcher)'
+      Current_Status: 'PROCESSING',
+      Current_Process: 'RD_COSALE_EXECUTION',
+      Current_Owner: 'RD & Co-Sale',
+      RD_Status: 'IN_PROGRESS',
+      CoSale_Status: 'IN_PROGRESS'
     },
     token,
     spreadsheetId
   );
-
-  await sendWorkflowEmail('EVENT_SUBMITTED', sampleNo, {
-    toEmail: 'logistic.precheck@company.com',
-    saleEmail: submitter?.email || 'sale@company.com'
-  }, token, spreadsheetId);
 
   return result;
 }
@@ -959,9 +995,8 @@ export async function completeSO(
 
 export async function checkReadyToDeliverGate(sampleNo: string, token?: string, spreadsheetId?: string) {
   const sId = getActiveSpreadsheetId(spreadsheetId);
-  let rdCompleted = true;
-  let soCompleted = true;
-  let vehicleConfirmed = true;
+  let rdCompleted = false;
+  let soCompleted = false;
 
   if (token && sId) {
     try {
@@ -977,17 +1012,15 @@ export async function checkReadyToDeliverGate(sampleNo: string, token?: string, 
         soCompleted = sampleCoSale.Task_Status === 'COMPLETED' && !!sampleCoSale.SO_Number;
       }
 
-      const logTasks = await readSheet(token, sId, '12_LOGISTIC_TASK');
-      const sampleLog = logTasks.find(t => t.Sample_No === sampleNo);
-      if (sampleLog) {
-        vehicleConfirmed = sampleLog.Task_Status === 'CONFIRMED' || !!sampleLog.Vehicle_No;
-      }
     } catch (e: any) {
       console.warn('Gate check reading error:', e.message);
     }
   }
 
-  const isReady = rdCompleted && soCompleted && vehicleConfirmed;
+  const stored = memoryStore.requests.get(sampleNo);
+  rdCompleted = rdCompleted || stored?.RD_Status === 'COMPLETED';
+  soCompleted = soCompleted || stored?.CoSale_Status === 'COMPLETED';
+  const isReady = rdCompleted && soCompleted;
   if (isReady) {
     await updateSampleRequest(sampleNo, {
       Current_Status: 'READY TO DELIVER',
@@ -1000,7 +1033,7 @@ export async function checkReadyToDeliverGate(sampleNo: string, token?: string, 
 
   return {
     isReady,
-    criteria: { rdCompleted, soCompleted, vehicleConfirmed }
+    criteria: { rdCompleted, soCompleted }
   };
 }
 

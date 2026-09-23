@@ -84,7 +84,6 @@ export interface ReadyToDeliverGateResult {
   criteria: {
     rdReady: boolean;
     soCompleted: boolean;
-    vehicleConfirmed: boolean;
   };
 }
 

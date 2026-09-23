@@ -226,7 +226,7 @@ export function incrementRevisionString(currentRevision: string = 'REV.00'): str
  * checkReadyToDeliverGate(sampleNo)
  *
  * Conditions:
- * RD_Ready = TRUE AND SO_Completed = TRUE AND Vehicle_Confirmed = TRUE
+ * RD_Ready = TRUE AND SO_Completed = TRUE
  *
  * If all true:
  * Current_Status = READY_TO_DELIVER
@@ -235,16 +235,12 @@ export function incrementRevisionString(currentRevision: string = 'REV.00'): str
  * Shows blockers e.g.:
  * ✓ RD เตรียมตัวอย่างพร้อมแล้ว
  * ✓ Co Sale สร้าง SO แล้ว
- * ✕ Logistic ยังไม่ยืนยันรถ
  *
  * Strictly: ห้าม User override Gate ด้วย Manual Status Change
  */
 export function checkReadyToDeliverGate(request: SampleRequest): ReadyToDeliverGateResult {
   const rdReady = request.rdStatus === 'COMPLETED';
   const soCompleted = request.coSaleStatus === 'COMPLETED';
-  const vehicleConfirmed = request.logisticStatus === 'COMPLETED' && 
-                           Boolean(request.logisticTask?.vehicleNo?.trim()) && 
-                           Boolean(request.logisticTask?.driverName?.trim());
 
   const blockers: string[] = [];
   
@@ -260,21 +256,14 @@ export function checkReadyToDeliverGate(request: SampleRequest): ReadyToDeliverG
     blockers.push('✕ Co Sale ยังไม่ได้เปิด SO ในระบบ ERP');
   }
 
-  if (vehicleConfirmed) {
-    blockers.push('✓ Logistic ยืนยันรถและคนขับแล้ว');
-  } else {
-    blockers.push('✕ Logistic ยังไม่ยืนยันรถและคนขับ');
-  }
-
-  const isReady = rdReady && soCompleted && vehicleConfirmed;
+  const isReady = rdReady && soCompleted;
 
   return {
     isReady,
     blockers,
     criteria: {
       rdReady,
-      soCompleted,
-      vehicleConfirmed
+      soCompleted
     }
   };
 }

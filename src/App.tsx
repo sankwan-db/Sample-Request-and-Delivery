@@ -74,10 +74,10 @@ export default function App() {
                 <Route path="/cosale/issue" element={<CoSaleQueuePage />} />
 
                 {/* Logistic & Delivery (Parts 60, 73, 74) */}
-                <Route path="/logistic" element={<LogisticAssignmentPage />} />
-                <Route path="/logistic/check" element={<LogisticPrecheckPage />} />
-                <Route path="/logistic/assign" element={<LogisticAssignmentPage />} />
-                <Route path="/logistic/manage" element={<LogisticAssignmentPage />} />
+                <Route path="/logistic" element={<Navigate to="/delivery" replace />} />
+                <Route path="/logistic/check" element={<Navigate to="/delivery" replace />} />
+                <Route path="/logistic/assign" element={<Navigate to="/delivery" replace />} />
+                <Route path="/logistic/manage" element={<Navigate to="/delivery" replace />} />
                 <Route path="/logistic/delivery" element={<DeliveryOperationsPage />} />
                 <Route path="/logistic/tracking" element={<DeliveryOperationsPage />} />
                 <Route path="/logistic/pod" element={<DeliveryOperationsPage />} />
@@ -99,7 +99,7 @@ export default function App() {
                 <Route path="/master/product" element={<ProductMasterPage />} />
                 <Route path="/master/route" element={<MasterSettingsPage />} />
                 <Route path="/master/sla" element={<MasterSettingsPage />} />
-                <Route path="/master/approval-matrix" element={<MasterSettingsPage />} />
+                <Route path="/master/approval-matrix" element={<Navigate to="/" replace />} />
 
                 {/* Email & Notification Monitoring Routes */}
                 <Route path="/monitoring/issues" element={<IssueCenterPage />} />

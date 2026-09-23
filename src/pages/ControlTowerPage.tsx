@@ -77,12 +77,10 @@ export function ControlTowerPage() {
     if (req.currentStatus === RequestStatus.READY_TO_DELIVER) return 50;
 
     let pts = 10;
-    if (req.currentStatus === RequestStatus.WAITING_APPROVAL) pts = 20;
-    if (![RequestStatus.DRAFT, RequestStatus.LOGISTIC_PRE_CHECK, RequestStatus.WAITING_APPROVAL, RequestStatus.REJECTED].includes(req.currentStatus)) {
-      pts = 25;
-      if (req.rdStatus === 'COMPLETED') pts += 10;
-      if (req.coSaleStatus === 'COMPLETED') pts += 8;
-      if (req.logisticStatus === 'COMPLETED') pts += 7;
+    if (req.currentStatus === RequestStatus.PROCESSING) {
+      pts = 20;
+      if (req.rdStatus === 'COMPLETED') pts += 15;
+      if (req.coSaleStatus === 'COMPLETED') pts += 15;
     }
     return pts;
   };
@@ -106,7 +104,7 @@ export function ControlTowerPage() {
                 Enterprise Sample Request Control Tower
               </h1>
               <p className="text-[12px] text-slate-500">
-                มุมมองภาพรวมแบบ Real-Time ติดตามสถานะงานคู่ขนาน (RD, SO, Logistic), Progress, SLA, และการแจ้งเตือนปัญหา (Issue)
+                ติดตามงาน RD, SO, การจัดส่ง, SLA และปัญหาที่ต้องดำเนินการ
               </p>
             </div>
           </div>
@@ -171,10 +169,10 @@ export function ControlTowerPage() {
             className="bg-white border border-slate-200 rounded py-1.5 px-2.5 text-[12px] font-medium"
           >
             <option value="ALL">ทุกสถานะ (Status)</option>
-            <option value="WAITING_APPROVAL">WAITING_APPROVAL</option>
-            <option value="APPROVED">APPROVED (Parallel Queue)</option>
-            <option value="READY_TO_DELIVER">READY_TO_DELIVER</option>
-            <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="PROCESSING">PROCESSING (RD / Co-Sale)</option>
+            <option value="READY TO DELIVER">READY TO DELIVER</option>
+            <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
             <option value="DELIVERED">DELIVERED</option>
             <option value="COMPLETED">COMPLETED</option>
           </select>
@@ -225,7 +223,6 @@ export function ControlTowerPage() {
                 <th className="py-3 px-3">Owner</th>
                 <th className="py-3 px-2 text-center">RD</th>
                 <th className="py-3 px-2 text-center">SO</th>
-                <th className="py-3 px-2 text-center">Logistic</th>
                 <th className="py-3 px-3">Progress</th>
                 <th className="py-3 px-3">SLA</th>
                 <th className="py-3 px-2 text-center">Issue</th>
@@ -235,7 +232,7 @@ export function ControlTowerPage() {
             <tbody className="divide-y divide-slate-100">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={16} className="py-12 text-center text-slate-400">
+                  <td colSpan={15} className="py-12 text-center text-slate-400">
                     <Compass size={32} className="mx-auto text-slate-300 mb-2" />
                     <p className="font-semibold text-slate-600">ไม่พบข้อมูลตามเงื่อนไข</p>
                   </td>
@@ -317,13 +314,6 @@ export function ControlTowerPage() {
                         <span className={`inline-block w-2.5 h-2.5 rounded-full ${
                           req.coSaleStatus === 'COMPLETED' ? 'bg-emerald-500' : req.coSaleStatus === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-slate-300'
                         }`} title={`SO: ${req.coSaleStatus}`} />
-                      </td>
-
-                      {/* Parallel Logistic Status */}
-                      <td className="py-2.5 px-2 text-center">
-                        <span className={`inline-block w-2.5 h-2.5 rounded-full ${
-                          req.logisticStatus === 'COMPLETED' ? 'bg-emerald-500' : req.logisticStatus === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-slate-300'
-                        }`} title={`Logistic: ${req.logisticStatus}`} />
                       </td>
 
                       {/* Progress */}
@@ -459,15 +449,6 @@ export function ControlTowerPage() {
                   </span>
                 </div>
 
-                <div className="p-2.5 bg-emerald-50/60 border border-emerald-200 rounded flex justify-between items-center">
-                  <div>
-                    <span className="font-bold text-emerald-900 block">3. Logistic Task (มอบหมายรถ & คนขับ):</span>
-                    <span className="text-[11px] text-emerald-700">{activeDrawerReq.logisticTask?.vehicleNo || 'รอมอบหมายรถ'}</span>
-                  </div>
-                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-white text-emerald-800 border border-emerald-200">
-                    {activeDrawerReq.logisticStatus}
-                  </span>
-                </div>
               </div>
 
               {/* Products preview */}

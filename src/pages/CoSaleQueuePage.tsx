@@ -93,8 +93,10 @@ export function CoSaleQueuePage() {
   };
 
   // Filter requests based on queues (Part 72)
-  const approvedRequests = requests.filter(r => 
-    ![RequestStatus.DRAFT, RequestStatus.LOGISTIC_PRE_CHECK, RequestStatus.WAITING_APPROVAL, RequestStatus.REJECTED].includes(r.currentStatus)
+  const approvedRequests = requests.filter(r =>
+    [RequestStatus.PROCESSING, RequestStatus.READY_TO_DELIVER, RequestStatus.PICKED_UP,
+      RequestStatus.OUT_FOR_DELIVERY, RequestStatus.ARRIVED, RequestStatus.DELIVERED,
+      RequestStatus.CUSTOMER_RECEIVED, RequestStatus.COMPLETED].includes(r.currentStatus)
   );
 
   const filteredList = approvedRequests.filter(req => {
@@ -545,7 +547,7 @@ export function CoSaleQueuePage() {
                 <CheckSquare className="text-blue-600 shrink-0 mt-0.5" size={16} />
                 <div>
                   <span className="font-bold block">Ready to Deliver Gate Validation:</span>
-                  <span>เมื่อกด <strong>"บันทึกและปลดล็อกเป็น Completed"</strong> ระบบจะเรียกใช้ฟังก์ชัน <code className="bg-blue-100 px-1 py-0.5 rounded font-mono">checkReadyToDeliverGate()</code> ทันที หากแผนก RD และ Logistic พร้อมแล้ว สถานะจะปรับเป็น <strong>READY TO DELIVER</strong> โดยอัตโนมัติ</span>
+                  <span>เมื่อ Co-Sale ออก SO และ RD เตรียมสินค้าเสร็จ สถานะจะปรับเป็น <strong>READY TO DELIVER</strong> โดยอัตโนมัติ</span>
                 </div>
               </div>
             </div>

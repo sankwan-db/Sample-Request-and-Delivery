@@ -89,7 +89,7 @@ export function Dashboard() {
   // Trend Chart Data (Last 7 Days / Periods)
   const trendData = useMemo(() => {
     const data = [];
-    const baseDate = new Date('2026-09-05');
+    const baseDate = new Date();
     for (let i = 6; i >= 0; i--) {
       const d = new Date(baseDate);
       d.setDate(baseDate.getDate() - i);
@@ -116,8 +116,8 @@ export function Dashboard() {
   const deliveryActive = filteredRequests.filter(r => [RequestStatus.READY_TO_DELIVER, RequestStatus.PICKED_UP, RequestStatus.OUT_FOR_DELIVERY, RequestStatus.ARRIVED].includes(r.currentStatus)).length;
 
   // ROW 3: Delivery Today
-  const todayStr = '2026-09-05';
-  const deliveryTodayList = filteredRequests.filter(r => r.deliveryDate === todayStr || r.deliveryDate === '2026-09-07' || r.currentStatus === RequestStatus.READY_TO_DELIVER).slice(0, 5);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const deliveryTodayList = filteredRequests.filter(r => r.deliveryDate === todayStr).slice(0, 5);
 
   // ROW 3: My Tasks
   const myPendingTasks = useMemo(() => {
@@ -245,8 +245,8 @@ export function Dashboard() {
               <option value="ALL">สถานะ: ทั้งหมด</option>
               <option value="DRAFT">DRAFT</option>
               <option value="PROCESSING">PROCESSING</option>
-              <option value="READY_TO_DELIVER">READY_TO_DELIVER</option>
-              <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+              <option value="READY TO DELIVER">READY TO DELIVER</option>
+              <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
               <option value="COMPLETED">COMPLETED</option>
             </select>
           </div>

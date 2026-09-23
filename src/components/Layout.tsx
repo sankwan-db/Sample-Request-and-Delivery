@@ -42,12 +42,6 @@ export function Layout() {
         issue.status === 'OPEN' && (issue.department === 'LOGISTIC' || /DELIVERY|DELAY|CUSTOMER_REJECT|FAILED/i.test(issue.issueType))
       );
 
-      if ((role === 'SALE_MANAGER' || role === 'ADMIN') && req.currentStatus === RequestStatus.WAITING_APPROVAL) {
-        items.push({ id: `approval-${req.sampleNo}`, title: 'รออนุมัติคำขอตัวอย่าง', desc: `${req.sampleNo} • ${req.customerName}`, time: 'ต้องดำเนินการ', path: '/approval', unread: true });
-      }
-      if ((role === 'LOGISTIC' || role === 'ADMIN') && req.currentStatus === RequestStatus.LOGISTIC_PRE_CHECK) {
-        items.push({ id: `precheck-${req.sampleNo}`, title: 'รอ Logistic Pre-check', desc: `${req.sampleNo} • ส่ง ${req.deliveryDate || 'ยังไม่ระบุวัน'}`, time: 'งานใหม่', path: '/logistic/check', unread: true });
-      }
       if ((role === 'RD' || role === 'ADMIN') && req.currentStatus === RequestStatus.PROCESSING && req.rdStatus !== 'COMPLETED') {
         items.push({ id: `rd-${req.sampleNo}`, title: 'งานจัดเตรียมตัวอย่าง RD', desc: `${req.sampleNo} • แผนก ${req.department}`, time: 'รอดำเนินการ', path: requestPath, unread: true });
       }
@@ -243,7 +237,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
   const { requests } = useRequests();
   const role = user?.role || 'SALE';
   
-  const pendingApprovalsCount = requests.filter(r => r.currentStatus === RequestStatus.WAITING_APPROVAL).length;
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     'Dashboard': true,
@@ -280,14 +273,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
           ]
         },
         {
-          name: 'Approval', icon: <CheckSquare size={15} />, roles: [],
-          badge: pendingApprovalsCount > 0 ? String(pendingApprovalsCount) : undefined,
-          subItems: [
-            { name: 'รออนุมัติ', path: '/approval' },
-            { name: 'ประวัติ', path: '/approval/history' },
-          ]
-        },
-        {
           name: 'RD Preparation', icon: <Activity size={15} />, roles: ['RD', 'ADMIN'],
           subItems: [
             { name: 'รอรับงาน', path: '/rd/queue' },
@@ -308,7 +293,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
         {
           name: 'Logistic', icon: <Truck size={15} />, roles: ['LOGISTIC', 'ADMIN'],
           subItems: [
-            { name: 'จัดรถ', path: '/logistic/assign' },
             { name: 'Delivery', path: '/logistic/delivery' },
             { name: 'Delivery Issue', path: '/logistic/issue' },
           ]
@@ -350,7 +334,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
             { name: 'Product', path: '/master/product' },
             { name: 'Delivery Route', path: '/master/route' },
             { name: 'SLA Master', path: '/master/sla' },
-            { name: 'Approval Matrix', path: '/master/approval-matrix' },
           ]
         }
       ]
@@ -394,10 +377,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
       'คำขอของฉัน': ['Dashboard & Overview', 'สร้างคำขอ (Create Sample Request)'],
       'คำขอทั้งหมด': ['รายการคำขอทั้งหมด (All Requests)'],
 
-      // Approval subitems
-      'รออนุมัติ': ['อนุมัติ / ปฏิเสธ (Approve / Reject)', 'Dashboard & Overview'],
-      'ประวัติ': ['อนุมัติ / ปฏิเสธ (Approve / Reject)', 'รายการคำขอทั้งหมด (All Requests)'],
-
       // RD Preparation subitems
       'รอรับงาน': ['ตรวจสอบและวิเคราะห์ (R&D Prep)', 'ออกใบจัดเตรียมสูตร (RD Master)'],
       'กำลังเตรียม': ['ตรวจสอบและวิเคราะห์ (R&D Prep)', 'ออกใบจัดเตรียมสูตร (RD Master)'],
@@ -410,10 +389,8 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
       'SO Completed': ['จับคู่ข้อมูลการขาย (Sales Match / SO)'],
 
       // Logistic subitems
-      'Logistic Check': ['จัดเตรียมขนส่ง (Logistic Dispatch)', 'จัดเส้นทางขนส่ง (Vehicle Setup)'],
-      'จัดรถ': ['จัดเตรียมขนส่ง (Logistic Dispatch)', 'จัดเส้นทางขนส่ง (Vehicle Setup)'],
-      'Delivery': ['จัดเตรียมขนส่ง (Logistic Dispatch)', 'จัดเส้นทางขนส่ง (Vehicle Setup)'],
-      'Delivery Issue': ['จัดเตรียมขนส่ง (Logistic Dispatch)', 'จัดเส้นทางขนส่ง (Vehicle Setup)'],
+      'Delivery': ['จัดเตรียมขนส่ง (Logistic Dispatch)'],
+      'Delivery Issue': ['จัดเตรียมขนส่ง (Logistic Dispatch)'],
 
       // Email & Notification subitems (Admin only)
       'ผู้รับ Email': ['Sequence Setup & Running No', 'User & Access Control', 'การตั้งค่า (Settings)'],
@@ -433,7 +410,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
       'Product': ['การตั้งค่า (Settings)', 'Sequence Setup & Running No', 'User & Access Control'],
       'Delivery Route': ['การตั้งค่า (Settings)', 'Sequence Setup & Running No', 'User & Access Control'],
       'SLA Master': ['การตั้งค่า (Settings)', 'Sequence Setup & Running No', 'User & Access Control'],
-      'Approval Matrix': ['การตั้งค่า (Settings)', 'Sequence Setup & Running No', 'User & Access Control'],
 
       // System subitems
       'Company & Document Settings': ['Sequence Setup & Running No', 'User & Access Control'],
@@ -457,7 +433,6 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
     const mapping: Record<string, string[]> = {
       'Dashboard': ['Dashboard & Overview'],
       'Sample Request': ['สร้างคำขอ (Create Sample Request)', 'รายการคำขอทั้งหมด (All Requests)'],
-      'Approval': ['อนุมัติ / ปฏิเสธ (Approve / Reject)'],
       'RD Preparation': ['ตรวจสอบและวิเคราะห์ (R&D Prep)', 'ออกใบจัดเตรียมสูตร (RD Master)'],
       'Co Sale': ['จับคู่ข้อมูลการขาย (Sales Match / SO)'],
       'Logistic': ['จัดเตรียมขนส่ง (Logistic Dispatch)', 'จัดเส้นทางขนส่ง (Vehicle Setup)'],

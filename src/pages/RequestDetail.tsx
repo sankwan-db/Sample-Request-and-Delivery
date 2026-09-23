@@ -75,9 +75,7 @@ export function RequestDetail() {
     RequestStatus.COMPLETED
   ].includes(request.currentStatus);
 
-  const isReadyToDeliver = request.rdStatus === 'COMPLETED' && 
-                           request.coSaleStatus === 'COMPLETED' && 
-                           request.logisticStatus === 'COMPLETED';
+  const isReadyToDeliver = request.rdStatus === 'COMPLETED' && request.coSaleStatus === 'COMPLETED';
 
   // Handlers
   const handlePrecheckPass = () => {
@@ -248,29 +246,21 @@ export function RequestDetail() {
         </div>
 
         {/* Linear Stepper */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center text-[10px]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-[10px]">
           <PipelineNode 
             step="1" title="Sale & Validate" sub="กรอก & ตรวจสอบ" 
             status="DONE" 
           />
           <PipelineNode 
-            step="2" title="Logistic Pre-check" sub="ตรวจสายรถ/เวลา" 
-            status={request.logisticTask?.precheckStatus === 'PASS' ? 'DONE' : 'ACTIVE'} 
+            step="2" title="RD & Co-Sale" sub="เตรียมสินค้า / เปิด SO" 
+            status={isReadyToDeliver ? 'DONE' : request.currentStatus === RequestStatus.PROCESSING ? 'ACTIVE' : 'WAITING'} 
           />
           <PipelineNode 
-            step="3" title="Manager Approve" sub="อนุมัติ & แตก Task" 
-            status={isApproved ? 'DONE' : request.currentStatus === RequestStatus.WAITING_APPROVAL ? 'ACTIVE' : 'WAITING'} 
-          />
-          <PipelineNode 
-            step="4" title="Parallel Execution" sub="RD / Co-Sale / Logistic" 
-            status={isReadyToDeliver ? 'DONE' : isApproved ? 'ACTIVE' : 'WAITING'} 
-          />
-          <PipelineNode 
-            step="5" title="Delivery Gate" sub="พร้อมจัดส่ง" 
+            step="3" title="Delivery Gate" sub="พร้อมจัดส่ง" 
             status={['READY TO DELIVER', 'PICKED UP', 'OUT FOR DELIVERY', 'ARRIVED', 'DELIVERED', 'CUSTOMER RECEIVED', 'COMPLETED'].includes(request.currentStatus) ? 'DONE' : isReadyToDeliver ? 'ACTIVE' : 'WAITING'} 
           />
           <PipelineNode 
-            step="6" title="POD & Close" sub="ส่งมอบ & ปิดงาน" 
+            step="4" title="POD & Close" sub="ส่งมอบ & ปิดงาน" 
             status={request.currentStatus === RequestStatus.COMPLETED ? 'DONE' : ['PICKED UP', 'OUT FOR DELIVERY', 'ARRIVED', 'DELIVERED', 'CUSTOMER RECEIVED'].includes(request.currentStatus) ? 'ACTIVE' : 'WAITING'} 
           />
         </div>
@@ -343,138 +333,12 @@ export function RequestDetail() {
             </div>
           </WorkflowCard>
 
-          {/* STEP 2: LOGISTIC PRE-CHECK */}
-          <WorkflowCard 
-            stepNumber="2"
-            title="Logistic Pre-check (ตรวจสอบความเป็นไปได้ในการจัดส่ง)"
-            subtitle="ตรวจสอบเส้นทาง วัน เวลา และอุณหภูมิควบคุม"
-            status={request.logisticTask?.precheckStatus === 'PASS' ? 'PASSED' : 'PENDING'}
-          >
-            <div className="text-[12px] space-y-3">
-              <div className="bg-slate-50 p-3 rounded border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">เส้นทาง (Route)</span>
-                  <span className="font-bold text-slate-900">{request.route}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">กำหนดส่ง</span>
-                  <span className="font-bold text-slate-900">{request.deliveryDate}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">ช่วงเวลา</span>
-                  <span className="font-medium text-slate-800">{request.deliveryTimeFrom} - {request.deliveryTimeTo}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">อุณหภูมิควบคุม</span>
-                  <span className="font-bold text-red-600">{request.temperature}</span>
-                </div>
-              </div>
-
-              {request.logisticTask?.precheckStatus === 'PASS' ? (
-                <div className="bg-emerald-50 border border-emerald-200 rounded p-2.5 text-[11px] text-emerald-900 flex items-center gap-2">
-                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                  <div>
-                    <span className="font-bold">ผ่านการ Pre-check แล้ว: </span>
-                    {request.logisticTask.precheckRemark || 'เส้นทางและอุณหภูมิอยู่ในรอบเดินรถปกติ'}
-                    <span className="text-emerald-700 ml-1">({request.logisticTask.precheckBy} - {request.logisticTask.precheckTime})</span>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div className="bg-amber-50 border border-amber-200 rounded p-2.5 text-[11px] text-amber-900 mb-2">
-                    <span className="font-bold">รอฝ่ายโลจิสติกส์ตรวจสอบ: </span>
-                    ระบบส่งเรื่องไปยังคิว Logistic Pre-check แล้ว
-                  </div>
-                  {(role === 'LOGISTIC' || role === 'ADMIN') && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={handlePrecheckPass}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors flex items-center gap-1.5 shadow-xs"
-                      >
-                        <Check size={13} /> ยืนยันความพร้อมจัดส่ง (Confirm Feasibility)
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </WorkflowCard>
-
-          {/* STEP 3: SALE MANAGER APPROVAL */}
-          <WorkflowCard 
-            stepNumber="3"
-            title="Sale Manager Approval (การพิจารณาอนุมัติ)"
-            subtitle="ระบบสร้างเอกสาร PDF ส่ง Auto Email และแตก Task อัตโนมัติทันทีที่อนุมัติ"
-            status={isApproved ? 'PASSED' : request.currentStatus === RequestStatus.REJECTED ? 'REJECTED' : 'PENDING'}
-          >
-            <div className="text-[12px] space-y-3">
-              {isApproved ? (
-                <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-[11px] text-emerald-900 space-y-2">
-                  <div className="flex items-center gap-2 font-bold text-emerald-800">
-                    <ShieldCheck size={16} className="text-emerald-600" />
-                    อนุมัติเรียบร้อยแล้ว โดย {request.approvals?.[0]?.approverName || 'Sale Manager'} ({request.approvals?.[0]?.approvalDate})
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-emerald-200/60 text-[10px]">
-                    <div className="flex items-center gap-1 text-emerald-800 font-semibold">
-                      <Check size={12} className="text-emerald-600" /> ระบบ Generate PDF แล้ว
-                    </div>
-                    <div className="flex items-center gap-1 text-emerald-800 font-semibold">
-                      <Check size={12} className="text-emerald-600" /> ส่ง Auto Email สำเร็จ
-                    </div>
-                    <div className="flex items-center gap-1 text-emerald-800 font-semibold">
-                      <Check size={12} className="text-emerald-600" /> แตก Task ให้ 3 ฝ่ายแล้ว
-                    </div>
-                  </div>
-                </div>
-              ) : request.currentStatus === RequestStatus.REJECTED ? (
-                <div className="bg-red-50 border border-red-200 rounded p-3 text-[11px] text-red-900">
-                  <span className="font-bold block mb-1">คำขอถูกปฏิเสธ (Rejected)</span>
-                  <p>{request.approvals?.[0]?.rejectReason || 'ไม่อนุมัติเนื่องจากข้อมูลไม่สอดคล้องกับนโยบาย'}</p>
-                </div>
-              ) : request.currentStatus === RequestStatus.WAITING_APPROVAL ? (
-                <div className="space-y-3">
-                  <div className="bg-amber-50 border border-amber-200 rounded p-2.5 text-[11px] text-amber-900">
-                    <Clock size={13} className="inline mr-1 text-amber-700" />
-                    รอ Sale Manager พิจารณาอนุมัติคำขอ (SLA: 120 นาที)
-                  </div>
-                  
-                  {(role === 'SALE_MANAGER' || role === 'ADMIN') && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <button 
-                        onClick={handleApprove}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-4 py-1.5 rounded transition-colors flex items-center gap-1.5 shadow-xs"
-                      >
-                        <Check size={13} /> อนุมัติคำขอ (Approve)
-                      </button>
-                      <button 
-                        onClick={() => setShowRevisionModal(true)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 shadow-xs"
-                      >
-                        <Edit3 size={13} /> ขอให้แก้ไข (Revise)
-                      </button>
-                      <button 
-                        onClick={() => setShowRejectModal(true)}
-                        className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1 shadow-xs"
-                      >
-                        <X size={13} /> ปฏิเสธ (Reject)
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-slate-500 text-[11px] italic">
-                  ขั้นตอนอนุมัติจะเริ่มต้นเมื่อ Logistic ทำการ Pre-check ผ่านแล้ว
-                </p>
-              )}
-            </div>
-          </WorkflowCard>
-
-          {/* STEP 4: PARALLEL TASK EXECUTION (RD, CO-SALE, LOGISTIC) */}
+          {/* STEP 2: RD and Co-Sale work in parallel */}
           <div className="bg-white rounded-sm border border-[var(--color-border-light)] shadow-sm p-4">
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-900 text-white text-[10px] font-bold flex items-center justify-center">4</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-900 text-white text-[10px] font-bold flex items-center justify-center">2</span>
                   <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-900">
                     Parallel Department Tasks (ระบบแตก Task ดำเนินการขนานกัน)
                   </h3>
@@ -497,8 +361,8 @@ export function RequestDetail() {
               </div>
             </div>
 
-            {/* 3 Department Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* RD and Co-Sale work items */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               
               {/* Task 1: RD Preparation */}
               <div className={`border rounded p-3 flex flex-col justify-between transition-all ${
@@ -556,7 +420,7 @@ export function RequestDetail() {
                   )}
                 </div>
 
-                {request.rdStatus !== 'COMPLETED' && (role === 'RD' || role === 'ADMIN') && isApproved && (
+                {request.rdStatus !== 'COMPLETED' && (role === 'RD' || role === 'ADMIN') && request.currentStatus === RequestStatus.PROCESSING && (
                   <button 
                     onClick={handleRdComplete}
                     className="mt-3 w-full bg-purple-700 hover:bg-purple-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs"
@@ -623,7 +487,7 @@ export function RequestDetail() {
                   )}
                 </div>
 
-                {request.coSaleStatus !== 'COMPLETED' && (role === 'CO_SALE' || role === 'ADMIN') && isApproved && (
+                {request.coSaleStatus !== 'COMPLETED' && (role === 'CO_SALE' || role === 'ADMIN') && request.currentStatus === RequestStatus.PROCESSING && (
                   <button 
                     onClick={handleCoSaleComplete}
                     className="mt-3 w-full bg-blue-700 hover:bg-blue-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs"
@@ -633,80 +497,14 @@ export function RequestDetail() {
                 )}
               </div>
 
-              {/* Task 3: Logistic Vehicle Assignment */}
-              <div className={`border rounded p-3 flex flex-col justify-between transition-all ${
-                request.logisticStatus === 'COMPLETED' ? 'bg-emerald-50/40 border-emerald-300' : 'bg-white border-slate-300'
-              }`}>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-800 bg-teal-100 px-2 py-0.5 rounded">
-                      Logistic Vehicle
-                    </span>
-                    {request.logisticStatus === 'COMPLETED' ? (
-                      <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                        <Check size={12} /> ยืนยันรถแล้ว
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-amber-700 font-semibold flex items-center gap-1">
-                        <Clock size={11} /> รอจัดสรรรถ
-                      </span>
-                    )}
-                  </div>
-                  <h4 className="text-[12px] font-bold text-slate-900 mb-1">
-                    จัดสรรยานพาหนะและคนขับ
-                  </h4>
-                  <p className="text-[10px] text-slate-600 mb-3">
-                    ผู้รับผิดชอบ: Logistic Dispatcher
-                  </p>
-
-                  {request.logisticStatus === 'COMPLETED' ? (
-                    <div className="bg-white p-2 rounded border border-emerald-200 text-[10px] space-y-1">
-                      <div><span className="text-slate-500">ทะเบียน: </span><span className="font-bold text-slate-900">{request.logisticTask?.vehicleNo || vehicleNo}</span></div>
-                      <div><span className="text-slate-500">คนขับ: </span><span className="font-medium">{request.logisticTask?.driverName || driverName} ({request.logisticTask?.driverPhone || driverPhone})</span></div>
-                      <div><span className="text-slate-500">ประเภท: </span><span className="font-semibold text-teal-800">{request.logisticTask?.vehicleType || vehicleType}</span></div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5 text-[11px]">
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-500 uppercase block">ทะเบียนรถ (Vehicle No.)</label>
-                        <input 
-                          type="text" 
-                          value={vehicleNo} 
-                          onChange={e => setVehicleNo(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-[11px]"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-500 uppercase block">ชื่อคนขับ (Driver)</label>
-                        <input 
-                          type="text" 
-                          value={driverName} 
-                          onChange={e => setDriverName(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-[11px]"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {request.logisticStatus !== 'COMPLETED' && (role === 'LOGISTIC' || role === 'ADMIN') && isApproved && (
-                  <button 
-                    onClick={handleLogisticComplete}
-                    className="mt-3 w-full bg-teal-700 hover:bg-teal-800 text-white text-[11px] py-1.5 rounded font-bold transition-colors shadow-xs"
-                  >
-                    ยืนยันจัดสรรรถและคนขับ
-                  </button>
-                )}
-              </div>
-
             </div>
           </div>
 
-          {/* STEP 5: READY TO DELIVER GATE */}
+          {/* STEP 3: READY TO DELIVER GATE */}
           <div className="bg-white rounded-sm border border-[var(--color-border-light)] shadow-sm p-4">
             <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-blue-900 text-white text-[10px] font-bold flex items-center justify-center">5</span>
+                <span className="w-5 h-5 rounded-full bg-blue-900 text-white text-[10px] font-bold flex items-center justify-center">3</span>
                 <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-900">
                   Ready to Deliver Gate (ประตูกลั่นกรองคุณภาพก่อนส่ง)
                 </h3>
@@ -718,8 +516,8 @@ export function RequestDetail() {
               </span>
             </div>
 
-            {/* Checklist of 3 requirements */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] mb-3">
+            {/* Checklist of RD and Co-Sale requirements */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] mb-3">
               <div className={`p-2.5 rounded border flex items-center gap-2 ${
                 request.rdStatus === 'COMPLETED' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-600'
               }`}>
@@ -734,35 +532,29 @@ export function RequestDetail() {
                 <span className="font-semibold">Co-Sale ออก SO ใน ERP</span>
               </div>
 
-              <div className={`p-2.5 rounded border flex items-center gap-2 ${
-                request.logisticStatus === 'COMPLETED' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}>
-                {request.logisticStatus === 'COMPLETED' ? <Check size={16} className="text-emerald-600" /> : <X size={16} className="text-slate-400" />}
-                <span className="font-semibold">Logistic จัดสรรรถ/คนขับ</span>
-              </div>
             </div>
 
             {isReadyToDeliver ? (
               <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-[12px] text-emerald-900 flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold">
                   <CheckCircle2 size={16} className="text-emerald-600" />
-                  ผ่านเกณฑ์คุณภาพครบทั้ง 3 ฝ่าย พร้อมปล่อยรถส่งมอบตัวอย่างให้ลูกค้า!
+                  RD เตรียมตัวอย่างและ Co-Sale ออก SO ครบแล้ว พร้อมจัดส่งให้ลูกค้า
                 </div>
               </div>
             ) : (
               <div className="bg-amber-50 border border-amber-200 rounded p-2.5 text-[11px] text-amber-900 flex items-center gap-2">
                 <AlertTriangle size={15} className="text-amber-600 shrink-0" />
-                <span>ระบบจะล็อคขั้นตอนการส่ง จนกว่าทั้ง RD, Co-Sale และ Logistic จะยืนยันความพร้อมครบถ้วน</span>
+                <span>ระบบรอ RD เตรียมตัวอย่างและ Co-Sale ออก SO ให้ครบก่อนจัดส่ง</span>
               </div>
             )}
           </div>
 
-          {/* STEP 6: DELIVERY EXECUTION PIPELINE */}
+          {/* STEP 4: DELIVERY EXECUTION PIPELINE */}
           {isReadyToDeliver && (
             <div className="bg-white rounded-sm border border-[var(--color-border-light)] shadow-sm p-4">
               <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-900 text-white text-[10px] font-bold flex items-center justify-center">6</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-900 text-white text-[10px] font-bold flex items-center justify-center">4</span>
                   <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-900">
                     Delivery Execution Pipeline (ส่งมอบตัวอย่าง & ปิดงาน)
                   </h3>
@@ -896,14 +688,6 @@ export function RequestDetail() {
 
               <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px] text-slate-600">
                 <div className="flex justify-between">
-                  <span>Logistic Pre-check:</span>
-                  <span className="font-bold text-emerald-700">ผ่านใน 45 นาที (SLA 60m)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Manager Approval:</span>
-                  <span className="font-bold text-emerald-700">ผ่านใน 40 นาที (SLA 120m)</span>
-                </div>
-                <div className="flex justify-between">
                   <span>RD Preparation:</span>
                   <span className="font-bold text-blue-700">
                     {request.rdStatus === 'COMPLETED' ? 'เสร็จใน 195 นาที (SLA 240m)' : 'กำลังดำเนินการ'}
@@ -932,8 +716,8 @@ export function RequestDetail() {
               </div>
 
               <div>
-                <span className="text-[10px] text-slate-500 font-bold uppercase block mb-0.5">สายรถและอุณหภูมิ</span>
-                <span className="font-bold text-slate-900 block">{request.route}</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block mb-0.5">อุณหภูมิสำหรับจัดส่ง</span>
+                
                 <span className="text-red-700 font-semibold text-[11px]">{request.temperature}</span>
               </div>
 
