@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   FileText, Save, Send, Plus, Trash2, Lock, Unlock, 
   RotateCcw, CheckCircle2, AlertCircle, Sparkles, Building2,
@@ -208,6 +209,7 @@ export function CreateSample() {
   // Product Search UI State
   const [activeSearchLineId, setActiveSearchLineId] = useState<string | number | null>(null);
   const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [productTableExpanded, setProductTableExpanded] = useState(false);
 
   const currentProductList = useMemo(() => {
     return dynamicProducts.length > 0 ? dynamicProducts : PRODUCT_LIST;
@@ -1154,8 +1156,8 @@ export function CreateSample() {
       {/* ============================================================ */}
       {/* SECTION 2: PRODUCT SECTION (PART 55)                          */}
       {/* ============================================================ */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap justify-between items-center gap-2">
+      <div className={`${productTableExpanded ? 'fixed inset-2 z-[70] flex flex-col shadow-2xl' : ''} bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden`}>
+        <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-wrap justify-between items-center gap-2 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
               2
@@ -1171,17 +1173,18 @@ export function CreateSample() {
             </div>
           </div>
 
-          <button 
-            type="button"
-            onClick={addLine}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs"
-          >
-            <Plus size={14} /> เพิ่มรายการสินค้า (Add Product)
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setProductTableExpanded(value => !value)} className="px-3 py-1.5 border border-blue-300 rounded-md text-xs font-bold text-blue-700 hover:bg-blue-50" aria-pressed={productTableExpanded}>
+              {productTableExpanded ? 'ย่อตาราง' : 'ขยายตารางเต็มจอ'}
+            </button>
+            <button type="button" onClick={addLine} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs">
+              <Plus size={14} /> เพิ่มรายการสินค้า (Add Product)
+            </button>
+          </div>
         </div>
 
         {/* Product Table */}
-        <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-inner">
+        <div className={`${productTableExpanded ? 'flex-1 min-h-0' : ''} overflow-auto rounded-md border border-slate-200 bg-white shadow-inner`}>
           <table className="w-full text-left border-collapse min-w-[1800px]">
             <thead>
               <tr className="bg-slate-100/90 text-slate-700 text-[10px] font-bold uppercase tracking-wider border-b border-slate-200">
@@ -1247,7 +1250,7 @@ export function CreateSample() {
                         className="w-full bg-white border border-slate-200 rounded py-1 px-2 text-[12px] font-semibold text-slate-900 cursor-text flex items-center justify-between min-h-[30px]"
                         onClick={() => {
                           setActiveSearchLineId(line.id);
-                          setProductSearchQuery(line.productName || '');
+                          setProductSearchQuery('');
                         }}
                       >
                         <span className={line.productName ? 'text-slate-900' : 'text-slate-400 font-normal'}>
@@ -1256,53 +1259,35 @@ export function CreateSample() {
                         <ChevronDown size={14} className="text-slate-400" />
                       </div>
 
-                      {activeSearchLineId === line.id && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-10" 
-                            onClick={() => setActiveSearchLineId(null)}
-                          />
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-20 overflow-hidden min-w-[300px]">
-                            <div className="p-2 border-b border-slate-100 bg-slate-50">
+                      {activeSearchLineId === line.id && createPortal(
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-6" onKeyDown={e => { if (e.key === 'Escape') setActiveSearchLineId(null); }}>
+                          <div className="w-full max-w-4xl max-h-[90dvh] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label="เลือกสินค้าตัวอย่าง">
+                            <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
+                              <div>
+                                <h4 className="text-base font-bold text-slate-900">เลือกสินค้าตัวอย่าง</h4>
+                                <p className="text-xs text-slate-500">ค้นหาด้วยรหัสหรือชื่อสินค้า แล้วแตะรายการที่ต้องการ</p>
+                              </div>
+                              <button type="button" onClick={() => setActiveSearchLineId(null)} aria-label="ปิดหน้าต่างเลือกสินค้า" className="p-2 rounded-md hover:bg-slate-100"><X size={20} /></button>
+                            </div>
+                            <div className="p-4 border-b border-slate-200">
                               <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  placeholder="พิมพ์ชื่อสินค้า หรือรหัสสินค้าเพื่อค้นหา..."
-                                  value={productSearchQuery}
-                                  onChange={(e) => setProductSearchQuery(e.target.value)}
-                                  className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <input type="text" autoFocus placeholder="ค้นหารหัส ชื่อสินค้า หรือประเภทสินค้า..." value={productSearchQuery} onChange={e => setProductSearchQuery(e.target.value)} className="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                               </div>
                             </div>
-                            <div className="max-h-60 overflow-y-auto">
-                              {filteredProducts.length > 0 ? (
-                                filteredProducts.map(p => (
-                                  <button
-                                    key={p.itemCode}
-                                    type="button"
-                                    onClick={() => handleProductSelect(line.id, p.itemCode)}
-                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-slate-50 last:border-none group"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="text-[11px] font-bold text-blue-700 group-hover:text-blue-800">{p.itemCode}</span>
-                                      <span className="text-xs font-semibold text-slate-800">{p.productName}</span>
-                                      <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[10px] text-slate-400">[{p.deptCode}]</span>
-                                        <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">{p.category}</span>
-                                      </div>
-                                    </div>
-                                  </button>
-                                ))
-                              ) : (
-                                <div className="p-4 text-center text-slate-500 text-xs italic">
-                                  ไม่พบข้อมูลสินค้าที่ตรงกับการค้นหา
-                                </div>
-                              )}
+                            <div className="min-h-0 overflow-y-auto p-2 sm:p-4">
+                              {filteredProducts.length > 0 ? filteredProducts.map(p => (
+                                <button key={p.itemCode} type="button" onClick={() => handleProductSelect(line.id, p.itemCode)} className="w-full grid grid-cols-1 sm:grid-cols-[110px_minmax(0,1fr)_110px_90px] gap-1 sm:gap-4 items-center text-left p-3 rounded-md border-b border-slate-100 hover:bg-blue-50 focus:bg-blue-50">
+                                  <span className="font-mono text-xs font-bold text-blue-700">{p.itemCode}</span>
+                                  <span className="text-sm font-semibold text-slate-900 break-words">{p.productName}</span>
+                                  <span className="text-xs text-slate-600">{p.category} [{p.deptCode}]</span>
+                                  <span className="text-xs text-slate-500">{p.storageType || '-'} · {p.uom || 'KG'}</span>
+                                </button>
+                              )) : <p className="p-6 text-center text-sm text-slate-500">ไม่พบข้อมูลสินค้าที่ตรงกับการค้นหา</p>}
                             </div>
                           </div>
-                        </>
+                        </div>,
+                        document.body
                       )}
                     </div>
                     {/^GEN-/i.test(line.itemCode) && (
@@ -1456,7 +1441,7 @@ export function CreateSample() {
         </div>
 
         {/* Summary Card (PART 55) */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-6 text-xs text-slate-600">
               <div>
