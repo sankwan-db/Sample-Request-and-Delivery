@@ -85,11 +85,17 @@ export function Layout() {
       {/* Topbar */}
       <header className="h-[60px] bg-white border-b border-[var(--color-border-light)] flex items-center justify-between px-6 shrink-0 z-50">
         <div className="flex items-center gap-4 flex-1 max-w-md">
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary-blue)] transition-colors"
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(open => !open)}
+            className="flex shrink-0 items-center gap-2 rounded-sm p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-workspace-bg)] hover:text-[var(--color-primary-blue)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-primary-blue)]"
+            aria-label={sidebarOpen ? 'ซ่อนเมนูด้านซ้าย' : 'แสดงเมนูด้านซ้าย'}
+            aria-controls="main-sidebar"
+            aria-expanded={sidebarOpen}
+            title={sidebarOpen ? 'ซ่อนเมนูด้านซ้าย' : 'แสดงเมนูด้านซ้าย'}
           >
-            <Menu size={18} />
+            {sidebarOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+            <span className="hidden sm:inline text-xs font-semibold whitespace-nowrap">{sidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู'}</span>
           </button>
           <div className="relative w-full flex items-center gap-2">
             <div className="relative flex-1">
@@ -176,9 +182,11 @@ export function Layout() {
       {/* Main Body Container */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <aside 
-          className={`${sidebarOpen ? 'w-[230px]' : 'w-[64px]'} 
-          bg-[var(--color-sidebar-bg)] text-slate-300 transition-all duration-300 ease-in-out flex flex-col fixed inset-y-[60px] z-40 lg:relative shrink-0`}
+        <aside
+          id="main-sidebar"
+          className={`${sidebarOpen ? 'w-[230px]' : 'w-0 invisible pointer-events-none overflow-hidden'} bg-[var(--color-sidebar-bg)] text-slate-300 transition-[width] duration-300 ease-in-out flex flex-col fixed inset-y-[60px] z-40 lg:relative shrink-0`}
+          aria-hidden={!sidebarOpen}
+          inert={!sidebarOpen}
         >
           {/* Logo Section inside Sidebar */}
           <div className="h-[60px] flex items-center px-4 border-b border-slate-700/50 shrink-0">
@@ -201,7 +209,7 @@ export function Layout() {
         </aside>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[var(--color-workspace-bg)]">
+        <main className="flex-1 min-w-0 overflow-y-auto p-6 bg-[var(--color-workspace-bg)]">
           {dbConfigured === false && location.pathname !== '/admin/setup-wizard' && (
             <div className="mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
