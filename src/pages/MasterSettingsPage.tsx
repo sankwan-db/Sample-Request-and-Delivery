@@ -10,7 +10,7 @@ export function MasterSettingsPage() {
   const { logAuditEntry } = useRequests();
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'ROUTE' | 'SLA' | 'APPROVAL'>('ROUTE');
+  const [activeTab, setActiveTab] = useState<'ROUTE' | 'SLA'>('ROUTE');
 
   // Sync activeTab with URL path
   useEffect(() => {
@@ -18,19 +18,15 @@ export function MasterSettingsPage() {
       setActiveTab('ROUTE');
     } else if (location.pathname === '/master/sla') {
       setActiveTab('SLA');
-    } else if (location.pathname === '/master/approval-matrix') {
-      setActiveTab('APPROVAL');
     }
   }, [location.pathname]);
 
-  const handleTabChange = (tab: 'ROUTE' | 'SLA' | 'APPROVAL') => {
+  const handleTabChange = (tab: 'ROUTE' | 'SLA') => {
     setActiveTab(tab);
     if (tab === 'ROUTE') {
       navigate('/master/route');
     } else if (tab === 'SLA') {
       navigate('/master/sla');
-    } else if (tab === 'APPROVAL') {
-      navigate('/master/approval-matrix');
     }
   };
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -52,14 +48,6 @@ export function MasterSettingsPage() {
     { tier: 'Escalation', threshold: '> 150%', color: 'text-red-700 bg-red-100 border-red-300', desc: 'วิกฤตขั้นสูง: แจ้งเมลผู้บริหาร และโอนสิทธิ์ไปปฏิบัติการด่วนพิเศษ' }
   ]);
 
-  // Approval Limits
-  const [approvalMatrix, setApprovalMatrix] = useState([
-    { category: 'Raw Material', triggerLimit: '>= 20,000 THB หรือปริมาณ > 100 KG', role: 'SALE_MANAGER', bypassAllowed: false },
-    { category: 'Ready-To-Cook', triggerLimit: '>= 10,000 THB หรือปริมาณ > 200 PACK', role: 'SALE_MANAGER', bypassAllowed: true },
-    { category: 'Ready-To-Eat', triggerLimit: 'ทุกกรณี (เนื่องจากความปลอดภัยอาหารระดับพรีเมียม)', role: 'SALE_MANAGER', bypassAllowed: false },
-    { category: 'Further Processed', triggerLimit: '>= 50,000 THB เท่านั้น', role: 'SALE_MANAGER', bypassAllowed: true }
-  ]);
-
   const handleSaveRoutes = async () => {
     setSaveSuccess('ROUTE');
     await logAuditEntry('MASTER_CHANGE', 'ROUTE_MASTER', 'MASTER_DATA', 'Saved modifications to Delivery Route Master directories');
@@ -69,12 +57,6 @@ export function MasterSettingsPage() {
   const handleSaveSLA = async () => {
     setSaveSuccess('SLA');
     await logAuditEntry('MASTER_CHANGE', 'SLA_MASTER_LEVELS', 'MASTER_DATA', 'Updated Master SLA SLA Threshold levels');
-    setTimeout(() => setSaveSuccess(null), 3000);
-  };
-
-  const handleSaveApproval = async () => {
-    setSaveSuccess('APPROVAL');
-    await logAuditEntry('MASTER_CHANGE', 'APPROVAL_MATRIX', 'MASTER_DATA', 'Adjusted Approval matrix rules for different product categories');
     setTimeout(() => setSaveSuccess(null), 3000);
   };
 
@@ -116,15 +98,6 @@ export function MasterSettingsPage() {
         >
           <Clock size={14} />
           SLA Master Levels
-        </button>
-        <button
-          onClick={() => handleTabChange('APPROVAL')}
-          className={`px-4 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
-            activeTab === 'APPROVAL' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Shield size={14} />
-           Approval Matrix
         </button>
       </div>
 
@@ -227,62 +200,6 @@ export function MasterSettingsPage() {
         </div>
       )}
 
-      {activeTab === 'APPROVAL' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm">เงื่อนไขและลำดับการพิจารณาอนุมัติใบคำขอ (Approval Matrix Limits)</h3>
-              <p className="text-slate-400 text-[11px] mt-0.5">เงื่อนไขบังคับให้ส่งเอกสารให้ผู้บริหาร (Sales Manager) ตรวจสอบความถูกต้องก่อนออกรหัสตัวอย่าง</p>
-            </div>
-            <button
-              onClick={handleSaveApproval}
-              className="px-3.5 py-1.5 bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold rounded-lg inline-flex items-center gap-1.5"
-            >
-              <Save size={13} />
-              บันทึกกติกาอนุมัติ
-            </button>
-          </div>
-
-          {saveSuccess === 'APPROVAL' && (
-            <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs rounded-lg font-semibold">
-              อัปเดตระบบตรวจสอบขีดจำกัดราคาและประเภทสินค้า (Approval Matrix Limits) ลงในโมดูลสร้างตัวอย่างสำเร็จ!
-            </div>
-          )}
-
-          <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-            <table className="w-full text-left text-slate-700">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="py-2.5 px-4">หมวดผลิตภัณฑ์ (Product Segment)</th>
-                  <th className="py-2.5 px-4">เงื่อนไขการเรียกใบอนุมัติ (Trigger Constraint)</th>
-                  <th className="py-2.5 px-4">บทบาทสิทธิ์ผู้อนุมัติ</th>
-                  <th className="py-2.5 px-4 text-center">สามารถขอข้ามขั้นตอนชั่วคราว</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {approvalMatrix.map((ap) => (
-                  <tr key={ap.category} className="hover:bg-slate-50/50">
-                    <td className="py-3.5 px-4 font-bold text-slate-800">{ap.category}</td>
-                    <td className="py-3.5 px-4 text-blue-700 font-bold font-mono text-[11px]">{ap.triggerLimit}</td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200 font-bold font-mono">
-                        {ap.role}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      {ap.bypassAllowed ? (
-                        <span className="text-amber-700 font-bold">ได้ (มีบันทึกเหตุผลใน Audit Log)</span>
-                      ) : (
-                        <span className="text-rose-700 font-bold">ไม่ได้โดยเด็ดขาด</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

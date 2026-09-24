@@ -108,12 +108,9 @@ export function PerformanceAnalytics() {
 
   // Process Lead Time
   const processLeadTimeData = [
-    { process: '1. Logistic Pre-check', hours: 1.2, slaHours: 2.0 },
-    { process: '2. Sale Manager Approval', hours: 2.4, slaHours: 4.0 },
-    { process: '3. RD Preparation', hours: 8.5, slaHours: 12.0 },
-    { process: '4. Co-Sale ERP SO', hours: 1.8, slaHours: 3.0 },
-    { process: '5. Logistic Assignment', hours: 1.5, slaHours: 2.0 },
-    { process: '6. Transit & Delivery', hours: 3.0, slaHours: 5.0 },
+    { process: '1. RD Preparation', hours: 8.5, slaHours: 12.0 },
+    { process: '2. Co-Sale ERP SO', hours: 1.8, slaHours: 3.0 },
+    { process: '3. Transit & Delivery', hours: 3.0, slaHours: 5.0 },
   ];
 
   // SLA Chart Data
@@ -278,7 +275,7 @@ export function PerformanceAnalytics() {
               <AlertTriangle size={16} className="text-rose-600" />
             </div>
             <div className="text-[24px] font-black text-rose-700 font-mono">{slaStats.overdue}</div>
-            <p className="text-[11px] text-rose-600 mt-1">เกินกำหนดเวลา แจ้งเตือน Sale Manager</p>
+            <p className="text-[11px] text-rose-600 mt-1">เกินกำหนดเวลา แจ้งเตือนผู้รับผิดชอบ</p>
           </div>
 
           {/* Escalation Tier (>150%) */}

@@ -45,7 +45,6 @@ export function UserManagementPage() {
 
   const defaultMenusByRole: Record<string, string[]> = {
     SALE: ['Dashboard & Overview', 'สร้างคำขอ (Create Sample Request)', 'รายการคำขอทั้งหมด (All Requests)', 'การตั้งค่า (Settings)'],
-    SALE_MANAGER: ['Dashboard & Overview', 'สร้างคำขอ (Create Sample Request)', 'รายการคำขอทั้งหมด (All Requests)', 'อนุมัติ / ปฏิเสธ (Approve / Reject)', 'การตั้งค่า (Settings)'],
     RD: ['Dashboard & Overview', 'รายการคำขอทั้งหมด (All Requests)', 'ตรวจสอบและวิเคราะห์ (R&D Prep)', 'ออกใบจัดเตรียมสูตร (RD Master)', 'การตั้งค่า (Settings)'],
     CO_SALE: ['Dashboard & Overview', 'รายการคำขอทั้งหมด (All Requests)', 'จับคู่ข้อมูลการขาย (Sales Match / SO)', 'การตั้งค่า (Settings)'],
     LOGISTIC: ['Dashboard & Overview', 'รายการคำขอทั้งหมด (All Requests)', 'จัดเตรียมขนส่ง (Logistic Dispatch)', 'จัดเส้นทางขนส่ง (Vehicle Setup)', 'การตั้งค่า (Settings)'],
@@ -186,21 +185,11 @@ export function UserManagementPage() {
     { id: 'U-02', name: 'Commercial Sale Team', email: 'cosale.team@company.com', role: 'CO_SALE', department: 'Co-Sale Dept', active: true, lastLogin: '2026-09-05 09:12' },
     { id: 'U-03', name: 'RD Supervisor 01', email: 'rd.supervisor01@company.com', role: 'RD', department: 'RD Raw Material', active: true, lastLogin: '2026-09-05 10:15' },
     { id: 'U-04', name: 'Logistic Coordinator', email: 'logistic.coord@company.com', role: 'LOGISTIC', department: 'Logistic Logistics', active: true, lastLogin: '2026-09-05 08:44' },
-    { id: 'U-05', name: 'Sales Manager One', email: 'sale.manager01@company.com', role: 'SALE_MANAGER', department: 'Sales Management', active: true, lastLogin: '2026-09-04 17:05' },
     { id: 'U-06', name: 'Admin Master Control', email: 'admin.master@company.com', role: 'ADMIN', department: 'Executive Admin', active: true, lastLogin: '2026-09-05 10:28' }
   ]);
 
   // Permissions Matrix Definition
   const permissions = [
-    { module: 'Create Sample Request', SALE: true, SALE_MANAGER: true, RD: false, CO_SALE: false, LOGISTIC: false, ADMIN: true },
-    { module: 'Approve / Reject Requests', SALE: false, SALE_MANAGER: true, RD: false, CO_SALE: false, LOGISTIC: false, ADMIN: true },
-    { module: 'Modify Sequence Running Number', SALE: false, SALE_MANAGER: false, RD: false, CO_SALE: false, LOGISTIC: false, ADMIN: true },
-    { module: 'Skip Ahead Sequences', SALE: false, SALE_MANAGER: false, RD: false, CO_SALE: false, LOGISTIC: false, ADMIN: true },
-    { module: 'Void Sample Reference Number', SALE: false, SALE_MANAGER: true, RD: false, CO_SALE: false, LOGISTIC: false, ADMIN: true },
-    { module: 'Complete RD Preparation Tasks', SALE: false, SALE_MANAGER: false, RD: true, CO_SALE: false, LOGISTIC: false, ADMIN: true },
-    { module: 'Create Sale Order (SO) Match', SALE: false, SALE_MANAGER: false, RD: false, CO_SALE: true, LOGISTIC: false, ADMIN: true },
-    { module: 'Assign Logistic Vehicles & Dispatch', SALE: false, SALE_MANAGER: false, RD: false, CO_SALE: false, LOGISTIC: true, ADMIN: true },
-    { module: 'Modify Master Configurations', SALE: false, SALE_MANAGER: false, RD: false, CO_SALE: false, LOGISTIC: false, ADMIN: true }
   ];
 
   // User form
@@ -425,7 +414,6 @@ export function UserManagementPage() {
                     <td className="py-3 px-4">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                         u.role === 'ADMIN' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                        u.role === 'SALE_MANAGER' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         u.role === 'RD' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                         'bg-slate-50 text-slate-700 border-slate-200'
                       }`}>
@@ -485,7 +473,6 @@ export function UserManagementPage() {
                 <tr>
                   <th className="py-3 px-4">สิทธิ์กิจกรรมโมดูล (Module Event Capability)</th>
                   <th className="py-3 px-2 text-center w-20">SALE</th>
-                  <th className="py-3 px-2 text-center w-20">SALE MGR</th>
                   <th className="py-3 px-2 text-center w-20">RD DEPT</th>
                   <th className="py-3 px-2 text-center w-20">CO-SALE</th>
                   <th className="py-3 px-2 text-center w-20">LOGISTIC</th>
@@ -498,9 +485,6 @@ export function UserManagementPage() {
                     <td className="py-3.5 px-4 text-slate-800 font-semibold">{p.module}</td>
                     <td className="py-3.5 px-2 text-center">
                       <input type="checkbox" defaultChecked={p.SALE} disabled className="rounded text-blue-600 focus:ring-0" />
-                    </td>
-                    <td className="py-3.5 px-2 text-center">
-                      <input type="checkbox" defaultChecked={p.SALE_MANAGER} disabled className="rounded text-blue-600 focus:ring-0" />
                     </td>
                     <td className="py-3.5 px-2 text-center">
                       <input type="checkbox" defaultChecked={p.RD} disabled className="rounded text-blue-600 focus:ring-0" />
@@ -560,7 +544,6 @@ export function UserManagementPage() {
                     className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
                   >
                     <option value="SALE">SALE</option>
-                    <option value="SALE_MANAGER">SALE_MANAGER</option>
                     <option value="RD">RD</option>
                     <option value="CO_SALE">CO_SALE</option>
                     <option value="LOGISTIC">LOGISTIC</option>
@@ -619,7 +602,6 @@ export function UserManagementPage() {
                   >
                     <option value="">-- เลือกสิทธิ์ (Select Role) --</option>
                     <option value="SALE">SALE</option>
-                    <option value="SALE_MANAGER">SALE_MANAGER</option>
                     <option value="RD">RD</option>
                     <option value="CO_SALE">CO_SALE</option>
                     <option value="LOGISTIC">LOGISTIC</option>

@@ -300,10 +300,7 @@ export const PRODUCT_LIST: ProductMaster[] = [
 ];
 
 export const SLA_THRESHOLDS = {
-  LOGISTIC_PRECHECK: { minutes: 60, name: 'Logistic Pre-check' },
-  APPROVAL: { minutes: 120, name: 'Sale Manager Approval' },
   RD_PREPARATION: { minutes: 240, name: 'RD Sample Preparation' },
   CO_SALE_SO: { minutes: 60, name: 'Co-Sale SO Creation' },
-  VEHICLE_ASSIGNMENT: { minutes: 60, name: 'Vehicle & Driver Assignment' },
   DELIVERY: { minutes: 180, name: 'Sample Delivery & POD' },
 };

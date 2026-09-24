@@ -52,9 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (customSessionStr) {
        try {
          const customUser = JSON.parse(customSessionStr);
-         setUser(customUser);
-         setIsLoading(false);
-         return;
+         if (customUser.role === 'SALE_MANAGER') {
+           sessionStorage.removeItem('custom_user_session');
+         } else {
+           setUser(customUser);
+           setIsLoading(false);
+           return;
+         }
        } catch (e) {
          sessionStorage.removeItem('custom_user_session');
        }

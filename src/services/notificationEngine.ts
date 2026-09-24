@@ -45,57 +45,12 @@ export const NOTIFICATION_RULES: Record<string, {
 }> = {
   [EmailEventCode.SAMPLE_SUBMITTED]: {
     eventTitle: 'คำขอตัวอย่างถูกส่งเข้าระบบ',
-    targetRoles: ['LOGISTIC'],
+    targetRoles: ['RD', 'CO_SALE'],
     includeRequester: true,
     includeApprover: false,
-    includeDepartmentLead: false,
-    subjectTemplate: '[SAMPLE SUBMITTED] {{sampleNo}} : มีการสร้างคำขอตัวอย่างใหม่ - {{customerName}}',
-    bodyTemplate: 'คำขอตัวอย่างเลขที่ {{sampleNo}} ({{revision}}) สำหรับลูกค้า {{customerName}} ได้รับการสร้างโดย {{saleName}} เรียบร้อยแล้ว กำหนดจัดส่ง {{deliveryDate}} เวลา {{deliveryTimeFrom}}-{{deliveryTimeTo}} น.'
-  },
-  [EmailEventCode.LOGISTIC_CHECK_REQUIRED]: {
-    eventTitle: 'แจ้งเตือนโลจิสติกส์ตรวจสอบความเป็นไปได้ในการจัดส่ง',
-    targetRoles: ['LOGISTIC'],
-    includeRequester: false,
-    includeApprover: false,
-    includeDepartmentLead: false,
-    subjectTemplate: '[LOGISTIC PRE-CHECK REQUIRED] {{sampleNo}} : กรุณาตรวจสอบเส้นทางและอุณหภูมิการจัดส่ง - {{customerName}}',
-    bodyTemplate: 'คำขอตัวอย่างเลขที่ {{sampleNo}} รอการตรวจสอบความเป็นไปได้ (Pre-Check) เส้นทาง {{route}} ควบคุมอุณหภูมิ {{temperature}} น้ำหนักรวม {{totalQty}} กก. สถานที่: {{deliveryAddress}}, {{province}}'
-  },
-  [EmailEventCode.LOGISTIC_CONFIRMED]: {
-    eventTitle: 'โลจิสติกส์ยืนยันผลการตรวจสอบเส้นทางแล้ว',
-    targetRoles: ['SALE_MANAGER'],
-    includeRequester: true,
-    includeApprover: false,
-    includeDepartmentLead: false,
-    subjectTemplate: '[LOGISTIC CONFIRMED] {{sampleNo}} : ผ่านการตรวจสอบโลจิสติกส์แล้ว รอการอนุมัติ - {{customerName}}',
-    bodyTemplate: 'เจ้าหน้าที่โลจิสติกส์ได้ทำการ Pre-Check คำขอ {{sampleNo}} เรียบร้อยแล้ว ผลการตรวจ: {{feasibility}} สายการเดินรถ: {{route}} กำหนดส่ง: {{deliveryDate}} กรุณาเข้าสู่ระบบเพื่อพิจารณาอนุมัติ'
-  },
-  [EmailEventCode.APPROVAL_REQUIRED]: {
-    eventTitle: 'แจ้งเตือนผู้จัดการฝ่ายขายพิจารณาอนุมัติคำขอ',
-    targetRoles: ['SALE_MANAGER'],
-    includeRequester: false,
-    includeApprover: true,
-    includeDepartmentLead: false,
-    subjectTemplate: '[ACTION REQUIRED] {{sampleNo}} : รอการอนุมัติคำขอตัวอย่างสินค้า - {{customerName}}',
-    bodyTemplate: 'คำขอตัวอย่างเลขที่ {{sampleNo}} ({{revision}}) มูลค่ารวม ฿{{totalValue}} พร้อมให้ผู้จัดการฝ่ายขายพิจารณาอนุมัติ ผู้ขอ: {{saleName}}'
-  },
-  [EmailEventCode.SAMPLE_APPROVED]: {
-    eventTitle: 'คำขอตัวอย่างได้รับการอนุมัติอย่างเป็นทางการ',
-    targetRoles: ['SALE', 'RD', 'CO_SALE', 'LOGISTIC'],
-    includeRequester: true,
-    includeApprover: true,
     includeDepartmentLead: true,
-    subjectTemplate: '[SAMPLE APPROVED] {{sampleNo}} : ได้รับการอนุมัติแล้ว ระบบเริ่มกระจายงาน - {{customerName}}',
-    bodyTemplate: 'คำขอตัวอย่าง {{sampleNo}} ({{revision}}) ได้รับการอนุมัติเรียบร้อยแล้วโดย {{approverName}} ระบบได้ทำการ Freeze ข้อมูลและกระจายงานคู่ขนาน (RD ผลิต, Co-Sale เปิด SO, Logistic จัดเตรียมรถ)'
-  },
-  [EmailEventCode.APPROVED_DOCUMENT_GENERATED]: {
-    eventTitle: 'เอกสารคำขอตัวอย่าง PDF ทางการถูกสร้างและบันทึกลง Drive',
-    targetRoles: ['SALE', 'RD', 'CO_SALE'],
-    includeRequester: true,
-    includeApprover: true,
-    includeDepartmentLead: false,
-    subjectTemplate: '[DOCUMENT GENERATED] {{sampleNo}} : เอกสาร Official PDF พร้อมใช้งานบน Google Drive',
-    bodyTemplate: 'เอกสาร Official Sample Request PDF สำหรับ {{sampleNo}} (ไฟล์: {{pdfFileName}}) ได้รับการบันทึกลง Google Drive ที่โฟลเดอร์ {{drivePath}} และลงทะเบียนใน Document Register เรียบร้อยแล้ว'
+    subjectTemplate: '[SAMPLE SUBMITTED] {{sampleNo}} : มีการสร้างคำขอตัวอย่างใหม่ - {{customerName}}',
+    bodyTemplate: 'คำขอตัวอย่างเลขที่ {{sampleNo}} ({{revision}}) สำหรับลูกค้า {{customerName}} ส่งถึง RD และ Co-Sale แล้ว กำหนดจัดส่ง {{deliveryDate}} เวลา {{deliveryTimeFrom}}-{{deliveryTimeTo}} น.'
   },
   [EmailEventCode.SAMPLE_REJECTED]: {
     eventTitle: 'คำขอตัวอย่างถูกปฏิเสธ (Rejected)',
@@ -144,7 +99,7 @@ export const NOTIFICATION_RULES: Record<string, {
   },
   [EmailEventCode.RD_ISSUE]: {
     eventTitle: 'พบปัญหาในการจัดเตรียมตัวอย่างโดย RD',
-    targetRoles: ['SALE', 'SALE_MANAGER', 'RD'],
+    targetRoles: ['SALE', 'RD'],
     includeRequester: true,
     includeApprover: true,
     includeDepartmentLead: true,
@@ -225,7 +180,7 @@ export const NOTIFICATION_RULES: Record<string, {
   },
   [EmailEventCode.DELIVERY_DELAY]: {
     eventTitle: 'แจ้งเตือนการจัดส่งล่าช้ากว่ากำหนด (Delivery Delay)',
-    targetRoles: ['SALE', 'SALE_MANAGER', 'LOGISTIC'],
+    targetRoles: ['SALE', 'LOGISTIC'],
     includeRequester: true,
     includeApprover: true,
     includeDepartmentLead: false,
@@ -234,7 +189,7 @@ export const NOTIFICATION_RULES: Record<string, {
   },
   [EmailEventCode.DELIVERED]: {
     eventTitle: 'สินค้าตัวอย่างจัดส่งถึงปลายทางเรียบร้อยแล้ว (Delivered)',
-    targetRoles: ['SALE', 'SALE_MANAGER', 'CO_SALE'],
+    targetRoles: ['SALE', 'CO_SALE'],
     includeRequester: true,
     includeApprover: false,
     includeDepartmentLead: true,
@@ -243,7 +198,7 @@ export const NOTIFICATION_RULES: Record<string, {
   },
   [EmailEventCode.COMPLETED]: {
     eventTitle: 'กระบวนการส่งตัวอย่างเสร็จสมบูรณ์ปิดงาน (Completed)',
-    targetRoles: ['SALE', 'SALE_MANAGER', 'MANAGEMENT'],
+    targetRoles: ['SALE', 'MANAGEMENT'],
     includeRequester: true,
     includeApprover: true,
     includeDepartmentLead: true,
@@ -252,7 +207,7 @@ export const NOTIFICATION_RULES: Record<string, {
   },
   [EmailEventCode.SLA_WARNING]: {
     eventTitle: 'แจ้งเตือนใกล้ถึงกำหนดเวลา SLA (SLA Warning)',
-    targetRoles: ['SALE_MANAGER'],
+    targetRoles: ['SALE'],
     includeRequester: true,
     includeApprover: true,
     includeDepartmentLead: true,
@@ -261,7 +216,7 @@ export const NOTIFICATION_RULES: Record<string, {
   },
   [EmailEventCode.SLA_OVERDUE]: {
     eventTitle: 'แจ้งเตือนคำขอเกินกำหนดเวลา SLA (SLA Overdue)',
-    targetRoles: ['SALE_MANAGER', 'MANAGEMENT'],
+    targetRoles: ['MANAGEMENT'],
     includeRequester: true,
     includeApprover: true,
     includeDepartmentLead: true,
@@ -297,6 +252,7 @@ export async function resolveRecipients(
     if (masterRecipients && masterRecipients.length > 0) {
       masterRecipients.forEach(r => {
         const email = r.Email || r.email;
+        if (r.Role === 'SALE_MANAGER' || email === 'manager@company.com') return;
         const type = r.Recipient_Type || r.type || 'TO';
         if (email && email.includes('@')) {
           if (type === 'CC') ccSet.add(email.trim());
@@ -314,12 +270,6 @@ export async function resolveRecipients(
     toSet.add(request.saleEmail.trim());
   }
 
-  // - Approver (Sale Manager)
-  if (rule.includeApprover) {
-    const approverEmail = request.approvals?.[0]?.approverEmail || 'salemanager@company.com';
-    ccSet.add(approverEmail.trim());
-  }
-
   // - Department Lead / Group email
   if (rule.includeDepartmentLead) {
     const deptEmail = departmentGroupEmail || (request.department === 'RM' ? 'rd.rawmeat@company.com' : request.department === 'RTC' ? 'rd.rtc@company.com' : 'rd.further@company.com');
@@ -333,8 +283,8 @@ export async function resolveRecipients(
   if (rule.targetRoles.includes('CO_SALE')) {
     toSet.add('cosale.operations@company.com');
   }
-  if (rule.targetRoles.includes('SALE_MANAGER')) {
-    toSet.add('salemanager@company.com');
+  if (rule.targetRoles.includes('RD') && !rule.includeDepartmentLead) {
+    toSet.add(departmentGroupEmail || 'rd.rawmeat@company.com');
   }
   if (rule.targetRoles.includes('MANAGEMENT')) {
     ccSet.add('management.exec@company.com');
@@ -376,7 +326,7 @@ export function renderTemplate(template: string, payload: NotificationPayload): 
     '{{totalQty}}': String(req.totalQty || 0),
     '{{totalValue}}': (req.totalValue || 0).toLocaleString(),
     '{{feasibility}}': req.logisticTask?.feasibility || 'FEASIBLE',
-    '{{approverName}}': req.approvals?.[0]?.approverName || payload.actor?.name || 'Sale Manager',
+    '{{approverName}}': payload.actor?.name || req.saleName || 'Sale',
     '{{soNumber}}': payload.soNumber || req.coSaleTask?.soNumber || 'SO-PENDING',
     '{{vehicleNo}}': payload.vehicleNo || req.logisticTask?.vehicleNo || 'V-PENDING',
     '{{driverName}}': payload.driverName || req.logisticTask?.driverName || 'Driver',

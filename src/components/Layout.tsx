@@ -253,7 +253,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
       title: 'NAVIGATION',
       items: [
         { 
-          name: 'Dashboard', icon: <LayoutDashboard size={15} />, roles: ['SALE', 'SALE_MANAGER', 'ADMIN', 'RD', 'CO_SALE', 'LOGISTIC'],
+          name: 'Dashboard', icon: <LayoutDashboard size={15} />, roles: ['SALE', 'ADMIN', 'RD', 'CO_SALE', 'LOGISTIC'],
           subItems: [
             { name: 'ภาพรวม', path: '/' },
             { name: 'Control Tower', path: '/control-tower' },
@@ -265,7 +265,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
       title: 'OPERATIONS',
       items: [
         {
-          name: 'Sample Request', icon: <FileText size={15} />, roles: ['SALE', 'ADMIN', 'SALE_MANAGER'],
+          name: 'Sample Request', icon: <FileText size={15} />, roles: ['SALE', 'ADMIN'],
           subItems: [
             { name: 'สร้างคำขอ', path: '/sample/new' },
             { name: 'คำขอของฉัน', path: '/sample/my-requests' },
@@ -302,7 +302,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
     {
       title: 'MONITORING',
       items: [
-        { name: 'Issues', icon: <AlertTriangle size={15} />, path: '/monitoring/issues', roles: ['ADMIN', 'SALE_MANAGER', 'SALE', 'RD', 'CO_SALE', 'LOGISTIC', 'MANAGEMENT'] },
+        { name: 'Issues', icon: <AlertTriangle size={15} />, path: '/monitoring/issues', roles: ['ADMIN', 'SALE', 'RD', 'CO_SALE', 'LOGISTIC', 'MANAGEMENT'] },
         {
           name: 'Email & Notification', icon: <MailIcon size={15} />, roles: ['ADMIN'],
           subItems: [
@@ -313,7 +313,7 @@ function SidebarNav({ isOpen }: { isOpen: boolean }) {
           ]
         },
         {
-          name: 'Reports', icon: <BarChart3 size={15} />, roles: ['ADMIN', 'SALE_MANAGER'],
+          name: 'Reports', icon: <BarChart3 size={15} />, roles: ['ADMIN'],
           subItems: [
             { name: 'KPI Dashboard', path: '/admin/kpi' },
             { name: 'Lead Time', path: '/reports/lead-time' },
@@ -577,7 +577,6 @@ function ProfileDropdownTop() {
 
   const roleColors: Record<Role, string> = {
     SALE: 'text-blue-500',
-    SALE_MANAGER: 'text-purple-500',
     RD: 'text-green-500',
     CO_SALE: 'text-amber-500',
     LOGISTIC: 'text-cyan-500',
@@ -620,7 +619,7 @@ function ProfileDropdownTop() {
           <div className="px-3 py-2 text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest border-b border-[var(--color-border-light)] mb-1">
             Switch Role (Debug)
           </div>
-          {(['SALE', 'SALE_MANAGER', 'RD', 'CO_SALE', 'LOGISTIC', 'ADMIN'] as Role[]).map(role => (
+          {(['SALE', 'RD', 'CO_SALE', 'LOGISTIC', 'ADMIN'] as Role[]).map(role => (
             <button 
               key={role}
               onClick={() => { changeRole(role); setOpen(false); }}

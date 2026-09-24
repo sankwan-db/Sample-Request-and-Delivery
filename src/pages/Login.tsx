@@ -395,18 +395,12 @@ export function Login() {
 
             <div className="mt-6 pt-6 border-t border-[var(--color-border-light)]">
                <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-3 text-center">Test Accounts (Debug)</p>
-               <div className="grid grid-cols-2 gap-2">
+               <div className="grid grid-cols-1 gap-2">
                  <button 
                    onClick={() => { setEmail('sale@company.com'); setPassword('123456'); setMode('EMAIL'); }} 
                    className="text-[11px] font-medium text-[var(--color-text-secondary)] bg-[var(--color-workspace-bg)] hover:bg-[var(--color-border-light)] py-1.5 rounded-sm"
                  >
                    sale@company.com (123456)
-                 </button>
-                 <button 
-                   onClick={() => { setEmail('manager@company.com'); setPassword('123456'); setMode('EMAIL'); }} 
-                   className="text-[11px] font-medium text-[var(--color-text-secondary)] bg-[var(--color-workspace-bg)] hover:bg-[var(--color-border-light)] py-1.5 rounded-sm"
-                 >
-                   manager@company.com
                  </button>
                </div>
             </div>

@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { SampleRequest, formatSamplePdfFileName, getSamplePdfDrivePath } from '../types';
 import { useRequests } from '../contexts/RequestContext';
 import { 
-  X, Printer, Download, CheckCircle2, QrCode, ShieldCheck, FileText, 
+  X, Printer, Download, CheckCircle2, QrCode, FileText, 
   FolderTree, ExternalLink, Calendar, Building2, User, Truck, Package, 
   FileCheck2, DollarSign, Clock, Layers
 } from 'lucide-react';
@@ -43,7 +43,6 @@ export function SamplePDFModal({ request, onClose }: Props) {
 
   // Format Dates
   const preparedDate = request.createdDate || '05/09/2026';
-  const approvedDate = request.approvals?.[0]?.approvalDate || request.createdDate || '05/09/2026';
   const deliveryDate = request.deliveryDate || '07/09/2026';
 
   const downloadHtmlAsPdfDoc = () => {
@@ -188,14 +187,10 @@ export function SamplePDFModal({ request, onClose }: Props) {
                 </div>
 
                 {/* Header Sub-Dates (Prepared, Approved, Delivery) */}
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-slate-200 text-[11px] bg-slate-50/70 p-2 rounded">
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-200 text-[11px] bg-slate-50/70 p-2 rounded">
                   <div className="flex items-center gap-1.5">
                     <span className="text-slate-500 font-medium">Prepared Date:</span>
                     <span className="font-bold text-slate-900 font-mono">{preparedDate}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 justify-center">
-                    <span className="text-slate-500 font-medium">Approved Date:</span>
-                    <span className="font-bold text-emerald-800 font-mono">{approvedDate}</span>
                   </div>
                   <div className="flex items-center gap-1.5 justify-end">
                     <span className="text-slate-500 font-medium">Delivery Date:</span>
@@ -461,7 +456,7 @@ export function SamplePDFModal({ request, onClose }: Props) {
               {/* ============================================================ */}
               {/* SIGNATURE BLOCKS (PART 64): Prepared By, Approved By */}
               {/* ============================================================ */}
-              <div className="grid grid-cols-3 gap-3 text-[10.5px] border border-slate-400 rounded p-3 bg-white mt-2">
+              <div className="grid grid-cols-2 gap-3 text-[10.5px] border border-slate-400 rounded p-3 bg-white mt-2">
                 {/* Prepared By (Sale) */}
                 <div className="text-center flex flex-col justify-between h-24 border-r border-slate-200 pr-2">
                   <div>
@@ -471,23 +466,6 @@ export function SamplePDFModal({ request, onClose }: Props) {
                   </div>
                   <div className="border-t border-slate-300 pt-1 text-slate-600 text-[10px]">
                     วันที่ {preparedDate}
-                  </div>
-                </div>
-
-                {/* Approved By (Sale Manager) */}
-                <div className="text-center flex flex-col justify-between h-24 border-r border-slate-200 pr-2">
-                  <div>
-                    <span className="text-slate-500 block font-medium">ผู้อนุมัติ (Approved By)</span>
-                    <div className="mt-1 flex items-center justify-center gap-1 font-bold text-emerald-800">
-                      <ShieldCheck size={13} className="text-emerald-600" />
-                      <span>{request.approvals?.[0]?.approverName || 'Kitti (Sale Manager)'}</span>
-                    </div>
-                    <span className="text-[9.5px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.2 rounded inline-block mt-0.5">
-                      APPROVED ON SYSTEM
-                    </span>
-                  </div>
-                  <div className="border-t border-slate-300 pt-1 text-slate-600 text-[10px]">
-                    วันที่ {approvedDate}
                   </div>
                 </div>
 

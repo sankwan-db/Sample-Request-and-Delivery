@@ -41,18 +41,13 @@ export function EmailSettingsPage() {
 
   // Email Recipients Configuration
   const [recipients, setRecipients] = useState([
-    { event: 'LOGISTIC_PRECHECK', eventName: 'Logistic Pre-Check Notification', to: 'logistic.precheck@company.com', cc: 'sale.dept@company.com' },
-    { event: 'APPROVAL_REQUESTED', eventName: 'Approval Workflow Requested', to: 'sale.manager@company.com', cc: 'sale.dept@company.com' },
     { event: 'RD_TASK_ASSIGNED', eventName: 'RD Task Assigned & Queue', to: 'rd.supervisor@company.com', cc: 'logistic@company.com' },
     { event: 'SO_CREATION_WAITING', eventName: 'Co-Sale SO Wait / Task Out', to: 'cosale.team@company.com', cc: 'sale@company.com' },
-    { event: 'VEHICLE_ASSIGNMENT', eventName: 'Logistic Vehicle Selection', to: 'logistic.dispatch@company.com', cc: 'delivery@company.com' },
     { event: 'DELIVERY_DISPATCH', eventName: 'Delivery Dispatch & Update', to: 'logistic.dispatch@company.com', cc: 'sale@company.com' },
   ]);
 
   // Email Templates Configuration
   const [templates, setTemplates] = useState([
-    { code: 'TMPL_LOGISTIC_PRECHECK', name: 'Logistic Pre-Check Template', subject: '[LOGISTIC PRE-CHECK] New Request {SampleNo} - {CustomerName}', body: 'เรียน ทีมงานขนส่ง,\n\nมีคำขอส่งผลิตภัณฑ์ตัวอย่างใหม่หมายเลข {SampleNo} จัดส่งไปยังลูกค้า {CustomerName} วันที่ {DeliveryDate} กรุณาตรวจสอบความเป็นไปได้ในการบริการจัดรถ\n\nขอบคุณค่ะ\nระบบจัดเตรียมเอกสารอัตโนมัติ' },
-    { code: 'TMPL_APPROVAL_REQ', name: 'Manager Approval Required', subject: '[APPROVAL REQ] Request {SampleNo} - {CustomerName} (Total: {TotalValue} THB)', body: 'เรียน ผู้จัดการฝ่ายขาย,\n\nกรุณาพิจารณาอนุมัติคำขอตัวอย่างสินค้าหมายเลข {SampleNo} ลูกค้า {CustomerName} ยอดเงินรวม {TotalValue} บาท ที่ได้รับส่งเอกสารมา\n\nตรวจสอบรายละเอียดและทำรายการอนุมัติได้ในระบระบบ\n\nขอบคุณค่ะ' },
     { code: 'TMPL_RD_START', name: 'RD Preparation Active Notification', subject: '[RD ACTIVE] RD Department {Dept} started preparation for {SampleNo}', body: 'เรียน แผนก RD และผู้เกี่ยวข้อง,\n\nใบคำขอตัวอย่างเลขที่ {SampleNo} ได้เริ่มขั้นตอนการผลิตคัดเตรียมตัวอย่างโดย RD {Dept} แล้ว เป้าหมายแล้วเสร็จ {PreparationDate} {PreparationTime}\n\nขอบคุณค่ะ' }
   ]);
 

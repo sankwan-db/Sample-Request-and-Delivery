@@ -1,4 +1,4 @@
-export type Role = 'SALE' | 'LOGISTIC' | 'SALE_MANAGER' | 'RD' | 'CO_SALE' | 'ADMIN' | 'MANAGEMENT';
+export type Role = 'SALE' | 'LOGISTIC' | 'RD' | 'CO_SALE' | 'ADMIN' | 'MANAGEMENT';
 
 export enum RequestStatus {
   DRAFT = 'DRAFT',

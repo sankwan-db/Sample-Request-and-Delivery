@@ -79,18 +79,6 @@ function getAccessRequests(): any[] {
       approvedDate: "2026-09-05 00:00"
     },
     {
-      id: "DEMO-MANAGER",
-      email: "manager@company.com",
-      password: "123456",
-      name: "Nattapong (Sale Manager)",
-      department: "Commercial Sale",
-      status: "APPROVED",
-      role: "SALE_MANAGER",
-      menus: ['Dashboard & Overview', 'สร้างคำขอ (Create Sample Request)', 'รายการคำขอทั้งหมด (All Requests)', 'อนุมัติ / ปฏิเสธ (Approve / Reject)', 'การตั้งค่า (Settings)'],
-      requestDate: "2026-09-05 00:00",
-      approvedDate: "2026-09-05 00:00"
-    },
-    {
       id: "DEMO-RD-RAW",
       email: "rd.rawmeat@company.com",
       password: "123456",
@@ -279,6 +267,9 @@ async function startServer() {
   app.post('/api/admin/approve-request', async (req, res) => {
     try {
       const { requestId, role, department, menus } = req.body;
+      if (!['SALE', 'RD', 'CO_SALE', 'LOGISTIC', 'ADMIN', 'MANAGEMENT'].includes(role)) {
+        return res.status(400).json({ success: false, error: 'บทบาทนี้ไม่ได้ใช้งานแล้ว' });
+      }
       if (!requestId || !role) {
         return res.status(400).json({ success: false, error: 'ข้อมูลไม่ครบถ้วน' });
       }
@@ -371,6 +362,9 @@ async function startServer() {
 
       if (userReq.status === 'REJECTED') {
         return res.status(403).json({ success: false, error: 'คำขอสิทธิ์การใช้งานของคุณถูกปฏิเสธโดย Admin' });
+      }
+      if (userReq.role === 'SALE_MANAGER') {
+        return res.status(403).json({ success: false, error: 'บทบาทเดิมถูกยกเลิก กรุณาให้ Admin กำหนดสิทธิ์ใหม่' });
       }
 
       // Check if system config has a spreadsheetId
@@ -478,6 +472,9 @@ async function startServer() {
 
       if (userRecord['Active'] !== 'TRUE') {
         return res.json({ allowed: false, error: 'บัญชีนี้ถูกระงับการใช้งาน', spreadsheetId });
+      }
+      if (userRecord['Role'] === 'SALE_MANAGER') {
+        return res.json({ allowed: false, error: 'บทบาทเดิมถูกยกเลิก กรุณาให้ Admin กำหนดสิทธิ์ใหม่', spreadsheetId });
       }
 
       res.json({ 
